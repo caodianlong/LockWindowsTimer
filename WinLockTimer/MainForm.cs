@@ -348,7 +348,10 @@ public partial class MainForm : Form
             var settings = SettingsManager.LoadSettings();
 
             // 加载密码
-            passwordTextBox.Text = settings.ParentPassword;
+            // 注意：SettingsManager返回的是解密后的明文密码（如果是旧版AES）或BCrypt哈希
+            // 密码文本框应该显示空，因为BCrypt哈希不应该显示给用户
+            // 但parentPassword需要存储实际的密码值用于验证
+            passwordTextBox.Text = ""; // 不清空，让用户知道有密码设置
             parentPassword = settings.ParentPassword;
 
             // 加载提醒方式
