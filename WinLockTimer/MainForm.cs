@@ -76,8 +76,13 @@ public partial class MainForm : Form
                 return;
             }
 
-            // 保存家长密码
-            parentPassword = passwordTextBox.Text.Trim();
+            // 检查密码设置是否有变化，如果有变化则保存
+            string currentPassword = passwordTextBox.Text.Trim();
+            if (currentPassword != "●●●●●●" && !string.IsNullOrEmpty(currentPassword))
+            {
+                // 用户输入了新密码，需要保存
+                SaveCurrentSettings();
+            }
 
             totalTime = TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes);
             remainingTime = totalTime;
@@ -348,11 +353,20 @@ public partial class MainForm : Form
             var settings = SettingsManager.LoadSettings();
 
             // 加载密码
-            // 注意：SettingsManager返回的是解密后的明文密码（如果是旧版AES）或BCrypt哈希
-            // 密码文本框应该显示空，因为BCrypt哈希不应该显示给用户
-            // 但parentPassword需要存储实际的密码值用于验证
-            passwordTextBox.Text = ""; // 不清空，让用户知道有密码设置
-            parentPassword = settings.ParentPassword;
+            // SettingsManager返回的是BCrypt哈希密码，不能显示在文本框中
+            // 在文本框中显示占位符，表示已设置密码
+            if (!string.IsNullOrEmpty(settings.ParentPassword))
+            {
+                passwordTextBox.Text = "●●●●●●"; // 显示占位符，表示密码已设置
+                passwordTextBox.PasswordChar = '●'; // 使用圆点显示
+            }
+            else
+            {
+                passwordTextBox.Text = ""; // 没有密码时显示为空
+                passwordTextBox.PasswordChar = '*'; // 恢复星号显示
+            }
+
+            parentPassword = settings.ParentPassword; // 保存哈希密码用于验证
 
             // 加载提醒方式
             if (settings.ReminderType >= 0 && settings.ReminderType < reminderTypeComboBox.Items.Count)
@@ -375,18 +389,46 @@ public partial class MainForm : Form
     {
         try
         {
-            var settings = new SettingsManager.AppSettings
-            {
-                ParentPassword = passwordTextBox.Text.Trim(),
-                ReminderType = reminderTypeComboBox.SelectedIndex,
-                RememberSettings = true
-            };
+            // 获取当前密码设置
+            string currentPassword = passwordTextBox.Text.Trim();
 
-            SettingsManager.SaveSettings(settings);
+            // 如果用户输入了新密码（不是占位符），则保存新密码
+            // 如果显示的是占位符，说明用户没有修改密码，不需要重新保存
+            bool shouldSavePassword = false;
+            string passwordToSave = "";
 
-            // 更新内存中的密码为哈希后的值（如果设置了密码）
-            if (!string.IsNullOrEmpty(passwordTextBox.Text.Trim()))
+            if (currentPassword == "●●●●●●")
             {
+                // 用户没有修改密码，不需要重新保存密码设置
+                // 直接返回，避免重复保存
+                return;
+            }
+            else if (string.IsNullOrEmpty(currentPassword))
+            {
+                // 用户清空了密码
+                shouldSavePassword = true;
+                passwordToSave = "";
+            }
+            else
+            {
+                // 用户输入了新密码，需要保存
+                shouldSavePassword = true;
+                passwordToSave = currentPassword;
+            }
+
+            // 只有当密码有变化时才保存设置
+            if (shouldSavePassword)
+            {
+                var settings = new SettingsManager.AppSettings
+                {
+                    ParentPassword = passwordToSave,
+                    ReminderType = reminderTypeComboBox.SelectedIndex,
+                    RememberSettings = true
+                };
+
+                SettingsManager.SaveSettings(settings);
+
+                // 更新内存中的密码
                 var loadedSettings = SettingsManager.LoadSettings();
                 parentPassword = loadedSettings.ParentPassword;
             }
@@ -458,6 +500,7 @@ public partial class MainForm : Form
 
                 // 重置界面设置
                 passwordTextBox.Text = "";
+                passwordTextBox.PasswordChar = '*'; // 恢复星号显示
                 parentPassword = "";
                 reminderTypeComboBox.SelectedIndex = 0;
                 currentReminderType = ReminderType.Popup;
@@ -467,6 +510,50 @@ public partial class MainForm : Form
             catch (Exception ex)
             {
                 MessageBox.Show($"清除设置失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
+    private void ChangePasswordButton_Click(object sender, EventArgs e)
+    {
+        if (isRunning)
+        {
+            MessageBox.Show("倒计时运行中，无法修改密码！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // 如果已设置家长密码，需要验证原密码
+        if (!string.IsNullOrEmpty(parentPassword))
+        {
+            if (!VerifyPassword("修改密码"))
+            {
+                return; // 密码验证失败，取消修改操作
+            }
+        }
+
+        // 显示密码修改对话框
+        using (var changePasswordForm = new ChangePasswordForm())
+        {
+            if (changePasswordForm.ShowDialog() == DialogResult.OK)
+            {
+                string newPassword = changePasswordForm.NewPassword;
+
+                if (string.IsNullOrEmpty(newPassword))
+                {
+                    // 用户清空了密码
+                    passwordTextBox.Text = "";
+                    passwordTextBox.PasswordChar = '*'; // 恢复星号显示
+                }
+                else
+                {
+                    // 用户设置了新密码
+                    passwordTextBox.Text = newPassword;
+                }
+
+                // 保存设置
+                SaveCurrentSettings();
+
+                MessageBox.Show("密码修改成功！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }
