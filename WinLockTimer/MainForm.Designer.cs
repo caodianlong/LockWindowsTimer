@@ -45,7 +45,6 @@ partial class MainForm
         this.controlGroupBox = new System.Windows.Forms.GroupBox();
         this.statusGroupBox = new System.Windows.Forms.GroupBox();
         this.settingsGroupBox = new System.Windows.Forms.GroupBox();
-        this.changePasswordButton = new System.Windows.Forms.Button();
         this.clearSettingsButton = new System.Windows.Forms.Button();
         this.reminderTypeComboBox = new System.Windows.Forms.ComboBox();
         this.reminderTypeLabel = new System.Windows.Forms.Label();
@@ -218,7 +217,6 @@ partial class MainForm
         //
         // settingsGroupBox
         //
-        this.settingsGroupBox.Controls.Add(this.changePasswordButton);
         this.settingsGroupBox.Controls.Add(this.clearSettingsButton);
         this.settingsGroupBox.Controls.Add(this.reminderTypeComboBox);
         this.settingsGroupBox.Controls.Add(this.reminderTypeLabel);
@@ -271,18 +269,6 @@ partial class MainForm
         this.passwordLabel.Size = new System.Drawing.Size(59, 15);
         this.passwordLabel.TabIndex = 0;
         this.passwordLabel.Text = "家长密码";
-        //
-        // changePasswordButton
-        //
-        this.changePasswordButton.BackColor = System.Drawing.Color.LightBlue;
-        this.changePasswordButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-        this.changePasswordButton.Location = new System.Drawing.Point(150, 90);
-        this.changePasswordButton.Name = "changePasswordButton";
-        this.changePasswordButton.Size = new System.Drawing.Size(130, 25);
-        this.changePasswordButton.TabIndex = 5;
-        this.changePasswordButton.Text = "修改密码";
-        this.changePasswordButton.UseVisualStyleBackColor = false;
-        this.changePasswordButton.Click += new System.EventHandler(this.ChangePasswordButton_Click);
         //
         // clearSettingsButton
         //
@@ -344,7 +330,6 @@ partial class MainForm
     private GroupBox controlGroupBox;
     private GroupBox statusGroupBox;
     private GroupBox settingsGroupBox;
-    private Button changePasswordButton;
     private Button clearSettingsButton;
     private TextBox passwordTextBox;
     private Label passwordLabel;

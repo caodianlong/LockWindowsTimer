@@ -514,47 +514,4 @@ public partial class MainForm : Form
         }
     }
 
-    private void ChangePasswordButton_Click(object sender, EventArgs e)
-    {
-        if (isRunning)
-        {
-            MessageBox.Show("倒计时运行中，无法修改密码！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-
-        // 如果已设置家长密码，需要验证原密码
-        if (!string.IsNullOrEmpty(parentPassword))
-        {
-            if (!VerifyPassword("修改密码"))
-            {
-                return; // 密码验证失败，取消修改操作
-            }
-        }
-
-        // 显示密码修改对话框
-        using (var changePasswordForm = new ChangePasswordForm())
-        {
-            if (changePasswordForm.ShowDialog() == DialogResult.OK)
-            {
-                string newPassword = changePasswordForm.NewPassword;
-
-                if (string.IsNullOrEmpty(newPassword))
-                {
-                    // 用户清空了密码
-                    passwordTextBox.Text = "";
-                    passwordTextBox.PasswordChar = '*'; // 恢复星号显示
-                }
-                else
-                {
-                    // 用户设置了新密码
-                    passwordTextBox.Text = newPassword;
-                }
-
-                // 保存设置
-                SaveCurrentSettings();
-
-                MessageBox.Show("密码修改成功！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-    }
 }
