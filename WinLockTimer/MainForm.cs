@@ -431,6 +431,15 @@ public partial class MainForm : Form
             return;
         }
 
+        // 如果已设置家长密码，需要验证密码
+        if (!string.IsNullOrEmpty(parentPassword))
+        {
+            if (!VerifyPassword("清除设置"))
+            {
+                return; // 密码验证失败，取消清除操作
+            }
+        }
+
         var result = MessageBox.Show(
             "确定要清除所有保存的设置吗？\n这将删除保存的密码和提醒方式设置。",
             "确认清除设置",
