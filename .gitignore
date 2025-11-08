@@ -33,16 +33,21 @@ bld/
 *.nupkg
 .nuget/
 nuget.exe
+packages/
 
 # Local settings files
 *.settings
+WinLockTimer.settings
 
 # Test files
 test_short_timer.cs
+TestBCrypt/
+TestPasswordPersistence/
 
 # Claude conversation files
 .claude/
 claude.md
+CLAUDE.md
 
 # Project analysis report (temporary)
 项目分析报告.md
@@ -58,3 +63,22 @@ Thumbs.db
 
 # Generated files
 *.Generated.cs
+
+# MSBuild
+*.csproj.user
+
+# Visual Studio cache/options directory
+.vs/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# Local History for Visual Studio
+.localhistory/
+
+# Backup folder for Package Reference Convert tool in Visual Studio 2017
+MigrationBackup/
+
+# Ionide (cross platform F# VS Code tools) working directory
+.ionide/

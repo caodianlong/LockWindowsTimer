@@ -30,15 +30,15 @@ public static class SettingsManager
     {
         try
         {
-            // 如果密码不为空，则加密保存
+            // 如果密码不为空，则使用BCrypt哈希保存
             if (!string.IsNullOrEmpty(settings.ParentPassword))
             {
-                string encryptedPassword = AesEncryption.Encrypt(settings.ParentPassword);
+                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(settings.ParentPassword);
 
-                // 创建临时设置对象，保存加密后的密码
+                // 创建临时设置对象，保存哈希后的密码
                 var tempSettings = new AppSettings
                 {
-                    ParentPassword = encryptedPassword,
+                    ParentPassword = hashedPassword,
                     ReminderType = settings.ReminderType,
                     RememberSettings = settings.RememberSettings
                 };
@@ -88,17 +88,35 @@ public static class SettingsManager
                 return new AppSettings();
             }
 
-            // 如果密码不为空，则尝试解密
-            if (!string.IsNullOrEmpty(settings.ParentPassword))
+            // 如果密码不为空，则检查是否为BCrypt哈希格式
+            // BCrypt哈希以$2a$, $2b$, $2y$等开头，长度通常为60字符
+            if (!string.IsNullOrEmpty(settings.ParentPassword) &&
+                settings.ParentPassword.StartsWith("$2") &&
+                settings.ParentPassword.Length >= 59)
             {
+                // 这是BCrypt哈希，不需要解密，保持原样
+                // 密码验证将在其他地方使用BCrypt.Verify进行
+            }
+            else if (!string.IsNullOrEmpty(settings.ParentPassword))
+            {
+                // 如果不是BCrypt格式，可能是旧版本的AES加密数据
+                // 尝试解密，然后重新哈希为BCrypt格式
                 try
                 {
                     string decryptedPassword = AesEncryption.Decrypt(settings.ParentPassword);
-                    settings.ParentPassword = decryptedPassword;
+                    if (!string.IsNullOrEmpty(decryptedPassword))
+                    {
+                        // 将旧密码重新哈希为BCrypt格式
+                        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(decryptedPassword);
+                        settings.ParentPassword = hashedPassword;
+
+                        // 保存更新后的设置
+                        SaveSettings(settings);
+                    }
                 }
                 catch
                 {
-                    // 如果解密失败，可能是旧格式或损坏的数据，清空密码
+                    // 如果解密失败，可能是损坏的数据，清空密码
                     settings.ParentPassword = string.Empty;
                 }
             }

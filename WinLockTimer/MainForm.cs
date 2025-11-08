@@ -174,14 +174,32 @@ public partial class MainForm : Form
         {
             if (passwordForm.ShowDialog() == DialogResult.OK)
             {
-                if (passwordForm.Password == parentPassword)
+                // 检查parentPassword是否为BCrypt哈希格式
+                if (parentPassword.StartsWith("$2") && parentPassword.Length >= 59)
                 {
-                    return true;
+                    // 使用BCrypt验证密码
+                    if (BCrypt.Net.BCrypt.Verify(passwordForm.Password, parentPassword))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return false;
+                    }
                 }
                 else
                 {
-                    MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
+                    // 如果不是BCrypt格式，使用旧方式直接比较
+                    if (passwordForm.Password == parentPassword)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return false;
+                    }
                 }
             }
         }
@@ -362,6 +380,13 @@ public partial class MainForm : Form
             };
 
             SettingsManager.SaveSettings(settings);
+
+            // 更新内存中的密码为哈希后的值（如果设置了密码）
+            if (!string.IsNullOrEmpty(passwordTextBox.Text.Trim()))
+            {
+                var loadedSettings = SettingsManager.LoadSettings();
+                parentPassword = loadedSettings.ParentPassword;
+            }
         }
         catch (Exception ex)
         {
