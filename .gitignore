@@ -1,0 +1,60 @@
+# .NET build outputs
+bin/
+obj/
+
+# Visual Studio files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# NuGet packages
+*.nupkg
+.nuget/
+nuget.exe
+
+# Local settings files
+*.settings
+
+# Test files
+test_short_timer.cs
+
+# Claude conversation files
+.claude/
+claude.md
+
+# Project analysis report (temporary)
+项目分析报告.md
+
+# User-specific files
+*.userprefs
+
+# Mac files
+.DS_Store
+
+# Windows files
+Thumbs.db
+
+# Generated files
+*.Generated.cs
