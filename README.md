@@ -1,8 +1,14 @@
 # WinLockTimer - 家长控制电脑使用时间程序
 
+<div align="right">
+  <b>语言:</b>
+  <a href="README.md">中文</a> |
+  <a href="README.en.md">English</a>
+</div>
+
 ## 项目简介
 
-WinLockTimer 是一个Windows桌面应用程序，专门为家长设计，用于控制孩子使用电脑的时间。程序启动一个倒计时器，在倒计时结束前会弹出提醒，倒计时结束后自动锁屏。
+WinLockTimer 是一个简单的Windows桌面应用程序，专门为家长设计，用于控制孩子使用电脑的时间。程序启动一个倒计时器，在倒计时结束前会弹出提醒，倒计时结束后自动锁屏，可以设置密码防止孩子未经允许停止计时。
 
 ## 功能特点
 
