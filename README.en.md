@@ -34,8 +34,38 @@ WinLockTimer is a simple Windows desktop application designed specifically for p
 
 ## System Requirements
 
-- Windows 10 or higher
-- .NET 7.0 Runtime or higher
+- **Operating System**: Windows 10 or higher
+- **Runtime**: .NET 7.0 Runtime or higher
+- **Architecture**: x64 (64-bit)
+- **Permissions**: No administrator privileges required
+
+## Download and Installation
+
+### Release Package Structure
+Standard release package contains the following files:
+```
+WinLockTimer/
+├── WinLockTimer.exe              # Main program file (required)
+├── WinLockTimer.dll              # Program assembly (required)
+├── BCrypt.Net-Next.dll           # Encryption library (required)
+├── WinLockTimer.runtimeconfig.json  # Runtime configuration (required)
+├── WinLockTimer.deps.json        # Dependency configuration (required)
+├── 使用说明.md                    # user manual for Chinese (recommand)
+├── User_Manual.md                # user manual for English (recommand)
+└── WinLockTimer.settings         # User settings (auto-generated)
+```
+
+### User Installation Steps
+1. **Download**: Download the latest WinLockTimer release package from GitHub Releases page
+2. **Extract**: Extract the zip file to any folder (e.g., C:\\WinLockTimer)
+3. **Install Runtime**: If .NET 7.0 Runtime is not installed, please [download and install](https://dotnet.microsoft.com/download/dotnet/7.0) it first
+4. **Run**: Double-click `WinLockTimer.exe` to start the program
+5. **First Use**: The program will automatically create `WinLockTimer.settings` file to save user settings
+
+### Important Notes
+- **Security Software**: Some antivirus software may give false positives, please add the program to your trust list
+- **First Run**: The program will automatically create a user settings file, no manual creation needed
+- **Uninstall**: Simply delete the program folder, no system residue will be left
 
 ## Usage
 
@@ -86,10 +116,43 @@ WinLockTimer is a simple Windows desktop application designed specifically for p
 
 ### Using .NET CLI
 ```bash
-cd WinLockTimer
-dotnet build
-dotnet run
+# Clone repository
+git clone https://github.com/caodianlong/LockWindowsTimer.git
+cd LockWindowsTimer
+
+# Build Debug version
+dotnet build -c Debug
+
+# Build Release version
+dotnet build -c Release
+
+# Create release version (recommended)
+dotnet publish -c Release --self-contained false
 ```
+
+### Release Build
+After building, release files are located at: `WinLockTimer/bin/Release/net7.0-windows/publish/`
+
+## Deployment and Release
+
+### Creating Release Package
+```bash
+# Navigate to publish directory
+cd WinLockTimer/bin/Release/net7.0-windows/publish/
+
+# Create compressed package (Windows)
+tar -a -c -f WinLockTimer-v1.2.0.zip *.exe *.dll *.json *.md
+
+# Or manually select files to compress
+# Required files: WinLockTimer.exe, WinLockTimer.dll, BCrypt.Net-Next.dll, *.json
+# Recommended files: README.md, README.en.md
+```
+
+### GitHub Releases
+1. Create new Release tag (e.g., v1.2.0)
+2. Upload the built release package
+3. Add version description and changelog
+4. Publish the Release
 
 ## Deployment
 

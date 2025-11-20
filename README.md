@@ -33,8 +33,38 @@ WinLockTimer 是一个简单的Windows桌面应用程序，专门为家长设计
 
 ## 系统要求
 
-- Windows 10 或更高版本
-- .NET 7.0 Runtime 或更高版本
+- **操作系统**: Windows 10 或更高版本
+- **运行时**: .NET 7.0 Runtime 或更高版本
+- **架构**: x64 (64位)
+- **权限**: 无需管理员权限
+
+## 下载和安装
+
+### 发布包结构
+标准发布包包含以下文件：
+```
+WinLockTimer/
+├── WinLockTimer.exe              # 主程序文件 (必需)
+├── WinLockTimer.dll              # 程序组件 (必需)
+├── BCrypt.Net-Next.dll           # 加密库 (必需)
+├── WinLockTimer.runtimeconfig.json  # 运行时配置 (必需)
+├── WinLockTimer.deps.json        # 依赖配置 (必需)
+├── 使用说明.md                    # 使用说明 (推荐)
+├── User_Manual.md                # 英文说明 (推荐)
+└── WinLockTimer.settings         # 用户设置 (自动生成)
+```
+
+### 用户安装步骤
+1. **下载**: 从GitHub Releases页面下载最新版本的WinLockTimer压缩包
+2. **解压**: 将压缩包解压到任意文件夹（如：D:\\WinLockTimer）
+3. **安装运行库**: 如果系统未安装.NET 7.0 Runtime，请先[下载安装](https://dotnet.microsoft.com/download/dotnet/7.0)
+4. **运行**: 双击 `WinLockTimer.exe` 启动程序
+5. **首次使用**: 程序会自动创建 `WinLockTimer.settings` 文件保存用户设置
+
+### 注意事项
+- **安全软件**: 某些杀毒软件可能会误报，请将程序添加到信任列表
+- **首次运行**: 程序会自动创建用户设置文件，无需手动创建
+- **卸载**: 直接删除程序文件夹即可，不会在系统留下残留文件
 
 ## 使用方法
 
@@ -85,10 +115,43 @@ WinLockTimer 是一个简单的Windows桌面应用程序，专门为家长设计
 
 ### 使用.NET CLI
 ```bash
-cd WinLockTimer
-dotnet build
-dotnet run
+# 克隆仓库
+git clone https://github.com/caodianlong/LockWindowsTimer.git
+cd LockWindowsTimer
+
+# 构建Debug版本
+dotnet build -c Debug
+
+# 构建Release版本
+dotnet build -c Release
+
+# 创建发布版本（推荐）
+dotnet publish -c Release --self-contained false
 ```
+
+### 发布版本构建
+构建完成后，发布文件位于：`WinLockTimer/bin/Release/net7.0-windows/publish/`
+
+## 部署和发布
+
+### 创建发布包
+```bash
+# 进入发布目录
+cd WinLockTimer/bin/Release/net7.0-windows/publish/
+
+# 创建压缩包（Windows）
+tar -a -c -f WinLockTimer-v1.2.0.zip *.exe *.dll *.json *.md
+
+# 或者手动选择文件压缩
+# 必需文件：WinLockTimer.exe, WinLockTimer.dll, BCrypt.Net-Next.dll, *.json
+# 推荐文件：README.md, README.en.md
+```
+
+### GitHub Releases发布
+1. 创建新的Release标签（如：v1.2.0）
+2. 上传构建好的发布包
+3. 添加版本说明和更新日志
+4. 发布Release
 
 ## 部署
 
