@@ -82,7 +82,7 @@ partial class MainForm
         this.hoursNumericUpDown.Size = new System.Drawing.Size(60, 23);
         this.hoursNumericUpDown.TabIndex = 1;
         this.hoursNumericUpDown.Value = new decimal(new int[] {
-            1,
+            0,
             0,
             0,
             0});
@@ -98,6 +98,11 @@ partial class MainForm
         this.minutesNumericUpDown.Name = "minutesNumericUpDown";
         this.minutesNumericUpDown.Size = new System.Drawing.Size(60, 23);
         this.minutesNumericUpDown.TabIndex = 2;
+        this.minutesNumericUpDown.Value = new decimal(new int[] {
+            30,
+            0,
+            0,
+            0});
         //
         // hoursLabel
         //
