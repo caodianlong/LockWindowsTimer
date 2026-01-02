@@ -72,7 +72,7 @@ public partial class MainForm : Form
 
             if (hours == 0 && minutes == 0)
             {
-                MessageBox.Show("请设置有效的时间！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "请设置有效的时间！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -114,15 +114,12 @@ public partial class MainForm : Form
         {
             if (isPaused)
             {
-                // 继续计时
-                if (VerifyPassword("继续倒计时"))
-                {
-                    timer.Start();
-                    isPaused = false;
-                    pauseButton.Text = "暂停";
-                    pauseButton.BackColor = Color.LightYellow;
-                    UpdateStatus("倒计时运行中...");
-                }
+                // 继续计时 - 不需要验证密码
+                timer.Start();
+                isPaused = false;
+                pauseButton.Text = "暂停";
+                pauseButton.BackColor = Color.LightYellow;
+                UpdateStatus("倒计时运行中...");
             }
             else
             {
@@ -177,7 +174,7 @@ public partial class MainForm : Form
 
         using (var passwordForm = new PasswordForm(action))
         {
-            if (passwordForm.ShowDialog() == DialogResult.OK)
+            if (passwordForm.ShowDialog(this) == DialogResult.OK)
             {
                 // 检查parentPassword是否为BCrypt哈希格式
                 if (parentPassword.StartsWith("$2") && parentPassword.Length >= 59)
@@ -189,7 +186,7 @@ public partial class MainForm : Form
                     }
                     else
                     {
-                        MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(this, "密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return false;
                     }
                 }
@@ -202,7 +199,7 @@ public partial class MainForm : Form
                     }
                     else
                     {
-                        MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(this, "密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return false;
                     }
                 }
@@ -236,7 +233,7 @@ public partial class MainForm : Form
             // 重置界面
             ResetButton_Click(sender, e);
 
-            MessageBox.Show("时间到！电脑已锁屏。", "WinLockTimer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "时间到！电脑已锁屏。", "WinLockTimer", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 
@@ -271,13 +268,13 @@ public partial class MainForm : Form
         switch (currentReminderType)
         {
             case ReminderType.Popup:
-                MessageBox.Show(message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 break;
             case ReminderType.Voice:
                 PlayVoiceReminder(reminderTime);
                 break;
             case ReminderType.Both:
-                MessageBox.Show(message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 PlayVoiceReminder(reminderTime);
                 break;
         }
@@ -297,7 +294,7 @@ public partial class MainForm : Form
                 ? "⚠️ 最后1分钟！请准备保存工作！"
                 : $"⏰ 提醒：还有 {(int)reminderTime.TotalMinutes} 分钟将自动锁屏！";
 
-            MessageBox.Show(message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -310,7 +307,7 @@ public partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"锁屏失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, $"锁屏失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -378,7 +375,7 @@ public partial class MainForm : Form
         catch (Exception ex)
         {
             // 如果加载设置失败，使用默认设置
-            MessageBox.Show($"加载设置失败: {ex.Message}", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, $"加载设置失败: {ex.Message}", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -435,7 +432,7 @@ public partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"保存设置失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, $"保存设置失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -449,7 +446,7 @@ public partial class MainForm : Form
                 return;
             }
 
-            var result = MessageBox.Show(
+            var result = MessageBox.Show(this,
                 "倒计时仍在运行中，确定要退出吗？",
                 "确认退出",
                 MessageBoxButtons.YesNo,
@@ -472,7 +469,7 @@ public partial class MainForm : Form
     {
         if (isRunning)
         {
-            MessageBox.Show("倒计时运行中，无法清除设置！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, "倒计时运行中，无法清除设置！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
@@ -485,7 +482,7 @@ public partial class MainForm : Form
             }
         }
 
-        var result = MessageBox.Show(
+        var result = MessageBox.Show(this,
             "确定要清除所有保存的设置吗？\n这将删除保存的密码和提醒方式设置。",
             "确认清除设置",
             MessageBoxButtons.YesNo,
@@ -505,11 +502,11 @@ public partial class MainForm : Form
                 reminderTypeComboBox.SelectedIndex = 0;
                 currentReminderType = ReminderType.Popup;
 
-                MessageBox.Show("设置已成功清除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "设置已成功清除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"清除设置失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, $"清除设置失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
