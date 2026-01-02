@@ -6,6 +6,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Media;
 using System.Windows.Forms;
+using WinLockTimer.Data;
+using WinLockTimer.Models;
+using WinLockTimer.Forms;
 
 public partial class MainForm : Form
 {
@@ -17,6 +20,11 @@ public partial class MainForm : Form
     private readonly HashSet<TimeSpan> triggeredReminders;
     private string parentPassword = "";
     private ReminderType currentReminderType = ReminderType.Popup;
+
+    private int _currentAccountId = -1;
+    private DateTime _sessionStartTime;
+    private AccountRepository _accountRepo;
+    private TimerRecordRepository _recordRepo;
 
     private enum ReminderType
     {
@@ -55,6 +63,31 @@ public partial class MainForm : Form
 
         // 加载保存的设置
         LoadSavedSettings();
+
+        // 数据库初始化
+        try 
+        {
+            DatabaseManager.InitializeDatabase();
+            _accountRepo = new AccountRepository();
+            _recordRepo = new TimerRecordRepository();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"数据库初始化失败: {ex.Message}\n账户和历史记录功能将无法使用。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void AccountManagementMenuItem_Click(object sender, EventArgs e)
+    {
+        if (VerifyPassword("打开账户管理"))
+        {
+            new AccountManagementForm().ShowDialog(this);
+        }
+    }
+
+    private void HistoryMenuItem_Click(object sender, EventArgs e)
+    {
+        new HistoryForm().ShowDialog(this);
     }
 
     private void ReminderTypeComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -90,10 +123,32 @@ public partial class MainForm : Form
             // 重置提醒触发记录
             triggeredReminders.Clear();
 
+            // 账户选择逻辑
+            _currentAccountId = -1; // Default
+            if (DatabaseManager.IsDatabaseAvailable())
+            {
+                var accounts = _accountRepo.GetAllAccounts();
+                if (accounts.Count > 0)
+                {
+                    using (var selectionForm = new AccountSelectionForm())
+                    {
+                        if (selectionForm.ShowDialog(this) == DialogResult.OK)
+                        {
+                            _currentAccountId = selectionForm.SelectedAccountId;
+                        }
+                        else
+                        {
+                            return; // 用户取消选择，取消开始
+                        }
+                    }
+                }
+            }
+
             // 启动计时器
             timer.Start();
             isRunning = true;
             isPaused = false;
+            _sessionStartTime = DateTime.Now; // 记录开始时间
 
             // 更新界面状态
             startButton.Enabled = false;
@@ -103,6 +158,7 @@ public partial class MainForm : Form
             minutesNumericUpDown.Enabled = false;
             passwordTextBox.Enabled = false;
             reminderTypeComboBox.Enabled = false;
+            accountManagementMenuItem.Enabled = false; // 计时中禁用账户管理
 
             UpdateStatus("倒计时运行中...");
         }
@@ -145,6 +201,12 @@ public partial class MainForm : Form
 
         // 停止计时器
         timer.Stop();
+        
+        if (isRunning) // Only save if it was running
+        {
+             SaveTimerRecord();
+        }
+
         isRunning = false;
         isPaused = false;
 
@@ -161,6 +223,7 @@ public partial class MainForm : Form
         minutesNumericUpDown.Enabled = true;
         passwordTextBox.Enabled = true;
         reminderTypeComboBox.Enabled = true;
+        accountManagementMenuItem.Enabled = true; // 重置后启用账户管理
 
         UpdateStatus("准备设置时间...");
     }
@@ -225,8 +288,12 @@ public partial class MainForm : Form
         {
             // 倒计时结束
             timer.Stop();
-            isRunning = false;
+            
+            // 保存记录
+            SaveTimerRecord();
 
+            isRunning = false;
+            
             // 执行锁屏
             LockScreen();
 
@@ -234,6 +301,38 @@ public partial class MainForm : Form
             ResetButton_Click(sender, e);
 
             MessageBox.Show(this, "时间到！电脑已锁屏。", "WinLockTimer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+
+    private void SaveTimerRecord()
+    {
+        try
+        {
+            if (!DatabaseManager.IsDatabaseAvailable()) return;
+            
+            // Calculate duration
+            // We can rely on _sessionStartTime and Now, EXCEPT pause handling complicates it.
+            // But usually parent control apps care about wall-clock time or active time?
+            // Existing logic: totalTime (Set) - remainingTime (Left) = Duration Used.
+            // This is accurate for "Active Time".
+            
+            double duration = (totalTime - remainingTime).TotalSeconds;
+            if (duration < 1) return; // Too short
+
+            var record = new TimerRecord
+            {
+                AccountId = _currentAccountId,
+                StartTime = _sessionStartTime,
+                EndTime = DateTime.Now,
+                DurationSeconds = duration
+            };
+            
+            _recordRepo.AddRecord(record);
+        }
+        catch (Exception ex)
+        {
+            // Fail silently or log
+            Debug.WriteLine(ex.Message);
         }
     }
 

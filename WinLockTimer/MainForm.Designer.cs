@@ -50,12 +50,17 @@ partial class MainForm
         this.reminderTypeLabel = new System.Windows.Forms.Label();
         this.passwordTextBox = new System.Windows.Forms.TextBox();
         this.passwordLabel = new System.Windows.Forms.Label();
+        this.menuStrip = new System.Windows.Forms.MenuStrip();
+        this.manageMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        this.accountManagementMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        this.historyMenuItem = new System.Windows.Forms.ToolStripMenuItem();
         ((System.ComponentModel.ISupportInitialize)(this.hoursNumericUpDown)).BeginInit();
         ((System.ComponentModel.ISupportInitialize)(this.minutesNumericUpDown)).BeginInit();
         this.timeSettingGroupBox.SuspendLayout();
         this.controlGroupBox.SuspendLayout();
         this.statusGroupBox.SuspendLayout();
         this.settingsGroupBox.SuspendLayout();
+        this.menuStrip.SuspendLayout();
         this.SuspendLayout();
         //
         // timeDisplayLabel
@@ -275,6 +280,39 @@ partial class MainForm
         this.passwordLabel.TabIndex = 0;
         this.passwordLabel.Text = "家长密码";
         //
+        // menuStrip
+        //
+        this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.manageMenuItem});
+        this.menuStrip.Location = new System.Drawing.Point(0, 0);
+        this.menuStrip.Name = "menuStrip";
+        this.menuStrip.Size = new System.Drawing.Size(400, 24);
+        this.menuStrip.TabIndex = 14;
+        this.menuStrip.Text = "menuStrip1";
+        //
+        // manageMenuItem
+        //
+        this.manageMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.accountManagementMenuItem,
+            this.historyMenuItem});
+        this.manageMenuItem.Name = "manageMenuItem";
+        this.manageMenuItem.Size = new System.Drawing.Size(44, 20);
+        this.manageMenuItem.Text = "管理";
+        //
+        // accountManagementMenuItem
+        //
+        this.accountManagementMenuItem.Name = "accountManagementMenuItem";
+        this.accountManagementMenuItem.Size = new System.Drawing.Size(124, 22);
+        this.accountManagementMenuItem.Text = "账户管理";
+        this.accountManagementMenuItem.Click += new System.EventHandler(this.AccountManagementMenuItem_Click);
+        //
+        // historyMenuItem
+        //
+        this.historyMenuItem.Name = "historyMenuItem";
+        this.historyMenuItem.Size = new System.Drawing.Size(124, 22);
+        this.historyMenuItem.Text = "历史记录";
+        this.historyMenuItem.Click += new System.EventHandler(this.HistoryMenuItem_Click);
+        //
         // clearSettingsButton
         //
         this.clearSettingsButton.BackColor = System.Drawing.Color.LightGray;
@@ -299,11 +337,13 @@ partial class MainForm
         this.Controls.Add(this.timeSettingGroupBox);
         this.Controls.Add(this.titleLabel);
         this.Controls.Add(this.timeDisplayLabel);
+        this.Controls.Add(this.menuStrip);
         this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+        this.MainMenuStrip = this.menuStrip;
         this.MaximizeBox = false;
         this.Name = "MainForm";
         this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-        this.Text = "WinLockTimer - 家长控制程序";
+        this.Text = "WinLockTimer - 家长控制程序 v2.0";
         ((System.ComponentModel.ISupportInitialize)(this.hoursNumericUpDown)).EndInit();
         ((System.ComponentModel.ISupportInitialize)(this.minutesNumericUpDown)).EndInit();
         this.timeSettingGroupBox.ResumeLayout(false);
@@ -313,6 +353,8 @@ partial class MainForm
         this.statusGroupBox.PerformLayout();
         this.settingsGroupBox.ResumeLayout(false);
         this.settingsGroupBox.PerformLayout();
+        this.menuStrip.ResumeLayout(false);
+        this.menuStrip.PerformLayout();
         this.ResumeLayout(false);
         this.PerformLayout();
 
@@ -340,4 +382,8 @@ partial class MainForm
     private Label passwordLabel;
     private ComboBox reminderTypeComboBox;
     private Label reminderTypeLabel;
+    private MenuStrip menuStrip;
+    private ToolStripMenuItem manageMenuItem;
+    private ToolStripMenuItem accountManagementMenuItem;
+    private ToolStripMenuItem historyMenuItem;
 }
