@@ -121,28 +121,7 @@ public class AccountSelectionForm : Form
 
     private void SelectAccount(Account account)
     {
-        if (!string.IsNullOrEmpty(account.PasswordHash))
-        {
-            // Prompt for password
-            using (var pwdForm = new PasswordPromptForm(account.Username))
-            {
-                if (pwdForm.ShowDialog() == DialogResult.OK)
-                {
-                    if (BCrypt.Net.BCrypt.Verify(pwdForm.Password, account.PasswordHash))
-                    {
-                        ConfirmSelection(account.Id);
-                    }
-                    else
-                    {
-                        MessageBox.Show("密码错误", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-        else
-        {
-            ConfirmSelection(account.Id);
-        }
+        ConfirmSelection(account.Id);
     }
 
     private void ConfirmSelection(int id)
@@ -150,35 +129,5 @@ public class AccountSelectionForm : Form
         SelectedAccountId = id;
         this.DialogResult = DialogResult.OK;
         this.Close();
-    }
-
-    // Inner class for simple password prompt
-    private class PasswordPromptForm : Form
-    {
-        public string Password { get; private set; } = "";
-        private TextBox txtPwd;
-
-        public PasswordPromptForm(string username)
-        {
-            this.Text = "输入密码";
-            this.Size = new Size(300, 150);
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-
-            var lbl = new Label { Text = $"请输入 {username} 的密码:", Location = new Point(20, 20), AutoSize = true };
-            txtPwd = new TextBox { Location = new Point(20, 50), Width = 240, PasswordChar = '*' };
-            var btnOk = new Button { Text = "确定", Location = new Point(180, 80), DialogResult = DialogResult.OK };
-            var btnCancel = new Button { Text = "取消", Location = new Point(80, 80), DialogResult = DialogResult.Cancel };
-
-            btnOk.Click += (s, e) => { Password = txtPwd.Text; };
-            
-            this.Controls.Add(lbl);
-            this.Controls.Add(txtPwd);
-            this.Controls.Add(btnOk);
-            this.Controls.Add(btnCancel);
-            this.AcceptButton = btnOk;
-        }
     }
 }

@@ -316,7 +316,7 @@ public partial class MainForm : Form
             // Existing logic: totalTime (Set) - remainingTime (Left) = Duration Used.
             // This is accurate for "Active Time".
             
-            double duration = (totalTime - remainingTime).TotalSeconds;
+            double duration = (DateTime.Now - _sessionStartTime).TotalSeconds;
             if (duration < 1) return; // Too short
 
             var record = new TimerRecord
