@@ -151,7 +151,12 @@ static class Program
                 return;
             }
 
-            webServer = new WebServerHost(settings.WebServerIp, settings.WebServerPort, settings.AccessToken);
+            webServer = new WebServerHost(
+                settings.WebServerIp, 
+                settings.WebServerPort, 
+                settings.WebServerEnableHttps,
+                settings.WebServerHttpsPort,
+                settings.AccessToken);
             webServer.Start();
 
             System.Diagnostics.Debug.WriteLine($"Web Server 已启动: {webServer.Url}");

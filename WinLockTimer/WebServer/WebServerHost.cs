@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using EmbedIO;
 using EmbedIO.Files;
 using EmbedIO.WebApi;
@@ -20,15 +22,19 @@ public class WebServerHost : IDisposable
     private Task? _serverTask;
     private readonly string _ip;
     private readonly int _port;
+    private readonly bool _enableHttps;
+    private readonly int _httpsPort;
     private readonly string _accessToken;
 
     public bool IsRunning => _server?.State == WebServerState.Listening;
-    public string Url => $"http://{_ip}:{_port}";
+    public string Url => _enableHttps ? $"https://{_ip}:{_httpsPort}" : $"http://{_ip}:{_port}";
 
-    public WebServerHost(string ip, int port, string accessToken)
+    public WebServerHost(string ip, int port, bool enableHttps, int httpsPort, string accessToken)
     {
         _ip = string.IsNullOrWhiteSpace(ip) ? "127.0.0.1" : ip;
         _port = port;
+        _enableHttps = enableHttps;
+        _httpsPort = httpsPort;
         _accessToken = accessToken;
     }
 
@@ -54,20 +60,53 @@ public class WebServerHost : IDisposable
             var options = new WebServerOptions()
                 .WithMode(HttpListenerMode.EmbedIO);
 
+            if (_enableHttps)
+            {
+                var certPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WinLockTimer.pfx");
+                X509Certificate2 cert;
+                if (File.Exists(certPath))
+                {
+                    cert = new X509Certificate2(certPath, "winlocktimer");
+                }
+                else
+                {
+                    using var rsa = RSA.Create(2048);
+                    var req = new CertificateRequest($"CN={_ip}", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    var rawCert = req.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(10));
+                    var pfxBytes = rawCert.Export(X509ContentType.Pfx, "winlocktimer");
+                    File.WriteAllBytes(certPath, pfxBytes);
+                    cert = new X509Certificate2(pfxBytes, "winlocktimer", X509KeyStorageFlags.Exportable);
+                }
+                options.WithCertificate(cert);
+            }
+
             // HttpListener 严格校验 Host 头。
             // 如果只绑定 127.0.0.1，使用 localhost 访问会被拒绝，所以需要同时绑定。
             if (_ip == "127.0.0.1" || _ip.ToLower() == "localhost")
             {
                 options.WithUrlPrefix($"http://127.0.0.1:{_port}");
                 options.WithUrlPrefix($"http://localhost:{_port}");
+                if (_enableHttps)
+                {
+                    options.WithUrlPrefix($"https://127.0.0.1:{_httpsPort}");
+                    options.WithUrlPrefix($"https://localhost:{_httpsPort}");
+                }
             }
             else if (_ip == "0.0.0.0" || _ip == "*" || _ip == "+")
             {
                 options.WithUrlPrefix($"http://+:{_port}");
+                if (_enableHttps)
+                {
+                    options.WithUrlPrefix($"https://+:{_httpsPort}");
+                }
             }
             else
             {
                 options.WithUrlPrefix($"http://{_ip}:{_port}");
+                if (_enableHttps)
+                {
+                    options.WithUrlPrefix($"https://{_ip}:{_httpsPort}");
+                }
             }
 
             _server = new EmbedIO.WebServer(options)

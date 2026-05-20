@@ -25,6 +25,8 @@ public static class SettingsManager
         public bool WebServerEnabled { get; set; } = true;
         public string WebServerIp { get; set; } = "127.0.0.1";
         public int WebServerPort { get; set; } = 5000;
+        public bool WebServerEnableHttps { get; set; } = true;
+        public int WebServerHttpsPort { get; set; } = 5001;
         public string AccessToken { get; set; } = string.Empty;
     }
 
