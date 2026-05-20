@@ -20,6 +20,29 @@ public static class SettingsManager
         public string ParentPassword { get; set; } = string.Empty;
         public int ReminderType { get; set; } = 0; // 0: 弹窗, 1: 语音, 2: 两者
         public bool RememberSettings { get; set; } = true;
+
+        // Web Server 设置
+        public bool WebServerEnabled { get; set; } = true;
+        public string WebServerIp { get; set; } = "127.0.0.1";
+        public int WebServerPort { get; set; } = 5000;
+        public string AccessToken { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// 生成随机 Access Token（32字节，Base64编码）
+    /// </summary>
+    public static string GenerateAccessToken()
+    {
+        var bytes = new byte[32];
+        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(bytes);
+        }
+        // 使用URL安全的Base64编码，去掉填充字符
+        return Convert.ToBase64String(bytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .TrimEnd('=');
     }
 
     /// <summary>

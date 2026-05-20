@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using WinLockTimer.Data;
 using WinLockTimer.Models;
 using WinLockTimer.Forms;
+using WinLockTimer.Services;
 
 public partial class MainForm : Form
 {
@@ -26,6 +27,9 @@ public partial class MainForm : Form
     private AccountRepository _accountRepo;
     private TimerRecordRepository _recordRepo;
 
+    // TimerService 引用
+    private readonly TimerService _timerService;
+
     private enum ReminderType
     {
         Popup = 0,
@@ -36,6 +40,9 @@ public partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
+
+        // 获取 TimerService 单例
+        _timerService = TimerService.Instance;
 
         // 初始化提醒时间点：10, 5, 4, 3, 2, 1分钟
         reminderTimes = new List<TimeSpan>
@@ -61,6 +68,11 @@ public partial class MainForm : Form
         // 设置提醒方式下拉框事件
         reminderTypeComboBox.SelectedIndexChanged += ReminderTypeComboBox_SelectedIndexChanged;
 
+        // 监听 TimerService 状态变更（从 Web API 触发的操作）
+        _timerService.StateChanged += OnTimerServiceStateChanged;
+        // 监听 TimerService 倒计时过期事件（无论从桌面还是 Web 启动都会触发锁屏）
+        _timerService.TimerExpired += OnTimerServiceExpired;
+
         // 加载保存的设置
         LoadSavedSettings();
 
@@ -75,6 +87,119 @@ public partial class MainForm : Form
         {
             MessageBox.Show($"数据库初始化失败: {ex.Message}\n账户和历史记录功能将无法使用。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    /// <summary>
+    /// TimerService 状态变更回调（可能从非 UI 线程触发）
+    /// 同步 WinForms UI 显示
+    /// </summary>
+    private void OnTimerServiceStateChanged()
+    {
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action(OnTimerServiceStateChanged));
+            return;
+        }
+
+        var status = _timerService.GetStatus();
+
+        // 同步本地状态
+        isRunning = status.IsRunning;
+        isPaused = status.IsPaused;
+        remainingTime = TimeSpan.FromSeconds(status.RemainingSeconds);
+        totalTime = TimeSpan.FromSeconds(status.TotalSeconds);
+
+        // 更新 UI
+        UpdateTimeDisplay(remainingTime);
+        UpdateStatus(status.Status);
+
+        // 更新按钮状态
+        if (isRunning)
+        {
+            startButton.Enabled = false;
+            pauseButton.Enabled = true;
+            resetButton.Enabled = true;
+            hoursNumericUpDown.Enabled = false;
+            minutesNumericUpDown.Enabled = false;
+            passwordTextBox.Enabled = false;
+            reminderTypeComboBox.Enabled = false;
+            accountManagementMenuItem.Enabled = false;
+
+            if (isPaused)
+            {
+                pauseButton.Text = "继续";
+                pauseButton.BackColor = Color.LightBlue;
+
+                // 暂停时停止本地计时器
+                if (timer.Enabled) timer.Stop();
+            }
+            else
+            {
+                pauseButton.Text = "暂停";
+                pauseButton.BackColor = Color.LightYellow;
+
+                // 运行时确保本地计时器也在运行
+                if (!timer.Enabled) timer.Start();
+            }
+        }
+        else
+        {
+            startButton.Enabled = true;
+            pauseButton.Enabled = false;
+            resetButton.Enabled = false;
+            pauseButton.Text = "暂停";
+            pauseButton.BackColor = Color.LightYellow;
+            hoursNumericUpDown.Enabled = true;
+            minutesNumericUpDown.Enabled = true;
+            passwordTextBox.Enabled = true;
+            reminderTypeComboBox.Enabled = true;
+            accountManagementMenuItem.Enabled = true;
+
+            if (timer.Enabled) timer.Stop();
+        }
+    }
+
+    /// <summary>
+    /// TimerService 倒计时过期回调
+    /// 无论倒计时从桌面 GUI 还是 Web UI 启动，到期都执行锁屏
+    /// </summary>
+    private void OnTimerServiceExpired()
+    {
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action(OnTimerServiceExpired));
+            return;
+        }
+
+        // 停止本地计时器
+        timer.Stop();
+
+        // 保存使用记录
+        SaveTimerRecord();
+
+        isRunning = false;
+        isPaused = false;
+
+        // 执行锁屏
+        LockScreen();
+
+        // 重置界面
+        remainingTime = TimeSpan.Zero;
+        UpdateTimeDisplay(TimeSpan.Zero);
+        startButton.Enabled = true;
+        pauseButton.Enabled = false;
+        resetButton.Enabled = false;
+        pauseButton.Text = "暂停";
+        pauseButton.BackColor = Color.LightYellow;
+        hoursNumericUpDown.Enabled = true;
+        minutesNumericUpDown.Enabled = true;
+        passwordTextBox.Enabled = true;
+        reminderTypeComboBox.Enabled = true;
+        accountManagementMenuItem.Enabled = true;
+
+        UpdateStatus("准备设置时间...");
+
+        MessageBox.Show(this, "时间到！电脑已锁屏。", "WinLockTimer", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void AccountManagementMenuItem_Click(object sender, EventArgs e)
@@ -144,6 +269,9 @@ public partial class MainForm : Form
                 }
             }
 
+            // 同步到 TimerService（Web API 可见）
+            _timerService.Start(hours, minutes, _currentAccountId);
+
             // 启动计时器
             timer.Start();
             isRunning = true;
@@ -176,6 +304,9 @@ public partial class MainForm : Form
                 pauseButton.Text = "暂停";
                 pauseButton.BackColor = Color.LightYellow;
                 UpdateStatus("倒计时运行中...");
+
+                // 同步到 TimerService
+                _timerService.Resume();
             }
             else
             {
@@ -187,6 +318,9 @@ public partial class MainForm : Form
                     pauseButton.Text = "继续";
                     pauseButton.BackColor = Color.LightBlue;
                     UpdateStatus("倒计时已暂停");
+
+                    // 同步到 TimerService
+                    _timerService.Pause();
                 }
             }
         }
@@ -224,6 +358,9 @@ public partial class MainForm : Form
         passwordTextBox.Enabled = true;
         reminderTypeComboBox.Enabled = true;
         accountManagementMenuItem.Enabled = true; // 重置后启用账户管理
+
+        // 同步到 TimerService
+        _timerService.Reset();
 
         UpdateStatus("准备设置时间...");
     }
@@ -273,34 +410,26 @@ public partial class MainForm : Form
 
     private void Timer_Tick(object sender, EventArgs e)
     {
-        if (remainingTime > TimeSpan.Zero)
+        // 统一通过 TimerService.Tick() 驱动倒计时递减
+        // TimerService 内部会在过期时触发 TimerExpired 事件，
+        // 由 OnTimerServiceExpired 处理锁屏逻辑
+        _timerService.Tick();
+
+        // 从 TimerService 同步状态到本地
+        var status = _timerService.GetStatus();
+        remainingTime = TimeSpan.FromSeconds(status.RemainingSeconds);
+        isRunning = status.IsRunning;
+        isPaused = status.IsPaused;
+
+        UpdateTimeDisplay(remainingTime);
+
+        // 检查是否需要触发提醒
+        CheckReminders();
+
+        // 更新状态显示
+        if (isRunning)
         {
-            remainingTime = remainingTime.Subtract(TimeSpan.FromSeconds(1));
-            UpdateTimeDisplay(remainingTime);
-
-            // 检查是否需要触发提醒
-            CheckReminders();
-
-            // 更新状态显示
             UpdateStatus($"剩余时间: {FormatTimeSpan(remainingTime)}");
-        }
-        else
-        {
-            // 倒计时结束
-            timer.Stop();
-            
-            // 保存记录
-            SaveTimerRecord();
-
-            isRunning = false;
-            
-            // 执行锁屏
-            LockScreen();
-
-            // 重置界面
-            ResetButton_Click(sender, e);
-
-            MessageBox.Show(this, "时间到！电脑已锁屏。", "WinLockTimer", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 
@@ -309,12 +438,6 @@ public partial class MainForm : Form
         try
         {
             if (!DatabaseManager.IsDatabaseAvailable()) return;
-            
-            // Calculate duration
-            // We can rely on _sessionStartTime and Now, EXCEPT pause handling complicates it.
-            // But usually parent control apps care about wall-clock time or active time?
-            // Existing logic: totalTime (Set) - remainingTime (Left) = Duration Used.
-            // This is accurate for "Active Time".
             
             double duration = (DateTime.Now - _sessionStartTime).TotalSeconds;
             if (duration < 1) return; // Too short
@@ -557,6 +680,10 @@ public partial class MainForm : Form
                 return;
             }
         }
+
+        // 取消 TimerService 事件订阅
+        _timerService.StateChanged -= OnTimerServiceStateChanged;
+        _timerService.TimerExpired -= OnTimerServiceExpired;
 
         // 保存当前设置
         SaveCurrentSettings();
