@@ -39,8 +39,24 @@ static class Program
     ///  The main entry point for the application.
     /// </summary>
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
+        // 检查启动参数
+        bool startMinimized = false;
+        if (args != null && args.Length > 0)
+        {
+            foreach (var arg in args)
+            {
+                if (arg.Equals("-minimized", StringComparison.OrdinalIgnoreCase) || 
+                    arg.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("/minimized", StringComparison.OrdinalIgnoreCase))
+                {
+                    startMinimized = true;
+                    break;
+                }
+            }
+        }
+
         // 创建互斥体，确保只有一个实例运行
         const string mutexName = "WinLockTimer_SingleInstance_Mutex";
         bool createdNew;
@@ -65,7 +81,7 @@ static class Program
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new MainForm());
+            Application.Run(new MainForm(startMinimized));
         }
         catch (Exception ex)
         {

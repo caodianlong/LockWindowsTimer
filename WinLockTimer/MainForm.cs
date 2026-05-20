@@ -27,6 +27,11 @@ public partial class MainForm : Form
     private AccountRepository _accountRepo;
     private TimerRecordRepository _recordRepo;
 
+    // 系统托盘
+    private NotifyIcon _trayIcon;
+    private ContextMenuStrip _trayMenu;
+    private bool _forceExit = false;
+
     // TimerService 引用
     private readonly TimerService _timerService;
 
@@ -37,9 +42,16 @@ public partial class MainForm : Form
         Both = 2
     }
 
-    public MainForm()
+    private bool _allowVisible = true;
+
+    public MainForm(bool startMinimized = false)
     {
         InitializeComponent();
+
+        if (startMinimized)
+        {
+            _allowVisible = false;
+        }
 
         // 获取 TimerService 单例
         _timerService = TimerService.Instance;
@@ -56,6 +68,8 @@ public partial class MainForm : Form
         };
 
         triggeredReminders = new HashSet<TimeSpan>();
+
+        InitializeTrayIcon();
 
         // 初始化界面状态
         UpdateTimeDisplay(TimeSpan.Zero);
@@ -658,27 +672,89 @@ public partial class MainForm : Form
         }
     }
 
+    private void InitializeTrayIcon()
+    {
+        _trayMenu = new ContextMenuStrip();
+        var showItem = new ToolStripMenuItem("显示主界面");
+        var exitItem = new ToolStripMenuItem("完全退出");
+
+        showItem.Click += (s, e) => { 
+            _allowVisible = true;
+            this.Show(); 
+            this.WindowState = FormWindowState.Normal; 
+            this.Activate(); 
+        };
+        exitItem.Click += TrayExit_Click;
+
+        _trayMenu.Items.Add(showItem);
+        _trayMenu.Items.Add(new ToolStripSeparator());
+        _trayMenu.Items.Add(exitItem);
+
+        _trayIcon = new NotifyIcon();
+        _trayIcon.Text = "WinLockTimer";
+        _trayIcon.Icon = this.Icon ?? SystemIcons.Application;
+        _trayIcon.ContextMenuStrip = _trayMenu;
+        _trayIcon.Visible = true;
+
+        _trayIcon.DoubleClick += (s, e) => { 
+            _allowVisible = true;
+            this.Show(); 
+            this.WindowState = FormWindowState.Normal; 
+            this.Activate(); 
+        };
+    }
+
+    protected override void SetVisibleCore(bool value)
+    {
+        if (!_allowVisible)
+        {
+            value = false;
+            if (!this.IsHandleCreated) CreateHandle();
+        }
+        base.SetVisibleCore(value);
+    }
+
+    private void TrayExit_Click(object? sender, EventArgs e)
+    {
+        if (!VerifyPassword("退出程序")) return;
+        
+        _forceExit = true;
+        this.Close();
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (isRunning)
+        // 如果是用户点击窗口的关闭按钮（X），且不是托盘菜单强制退出，则缩放到系统托盘
+        if (e.CloseReason == CloseReason.UserClosing && !_forceExit)
         {
-            if (!VerifyPassword("关闭程序"))
-            {
-                e.Cancel = true;
-                return;
-            }
+            e.Cancel = true;
+            this.Hide();
+            _trayIcon.ShowBalloonTip(2000, "WinLockTimer", "程序正在后台运行，双击图标恢复", ToolTipIcon.Info);
+            return;
+        }
 
+        // 如果是强制退出，且倒计时正在运行中，给最后一次确认提示（密码已经验证过了）
+        if (_forceExit && isRunning)
+        {
             var result = MessageBox.Show(this,
-                "倒计时仍在运行中，确定要退出吗？",
+                "倒计时仍在运行中，确定要完全退出吗？\n(退出后将无法自动锁定屏幕)",
                 "确认退出",
                 MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
+                MessageBoxIcon.Warning);
 
             if (result == DialogResult.No)
             {
                 e.Cancel = true;
+                _forceExit = false;
                 return;
             }
+        }
+
+        // 清理系统托盘图标
+        if (_trayIcon != null)
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
         }
 
         // 取消 TimerService 事件订阅
