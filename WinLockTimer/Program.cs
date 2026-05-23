@@ -21,6 +21,7 @@ static class Program
     // Windows API 常量
     private const int SW_RESTORE = 9;
     private const int SW_SHOW = 5;
+    private static readonly int ShowMainWindowMessage = RegisterWindowMessage("WinLockTimer_ShowMainWindow_v1");
 
     // Windows API 函数
     [DllImport("user32.dll")]
@@ -34,6 +35,14 @@ static class Program
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int RegisterWindowMessage(string lpString);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    internal static int ShowMainWindowMessageId => ShowMainWindowMessage;
 
     /// <summary>
     ///  The main entry point for the application.
@@ -67,8 +76,11 @@ static class Program
 
             if (!createdNew)
             {
-                // 已有实例在运行，激活已存在的窗口
-                ActivateExistingInstance();
+                // 已有实例在运行；只有普通启动才显示主窗口，-minimized 启动保持后台。
+                if (!startMinimized)
+                {
+                    ActivateExistingInstance();
+                }
                 return;
             }
 
@@ -210,7 +222,9 @@ static class Program
         try
         {
             // 通过窗口标题查找已存在的窗口
-            const string windowTitle = "WinLockTimer - 家长控制程序";
+            PostMessage(new IntPtr(0xffff), ShowMainWindowMessage, IntPtr.Zero, IntPtr.Zero);
+
+            const string windowTitle = "WinLockTimer - 家长控制程序 v2.0";
             IntPtr hWnd = FindWindow(null, windowTitle);
 
             if (hWnd != IntPtr.Zero)

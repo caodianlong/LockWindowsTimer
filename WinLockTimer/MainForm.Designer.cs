@@ -39,6 +39,7 @@ partial class MainForm
         this.pauseButton = new System.Windows.Forms.Button();
         this.resetButton = new System.Windows.Forms.Button();
         this.statusLabel = new System.Windows.Forms.Label();
+        this.windowsSessionStatusLabel = new System.Windows.Forms.Label();
         this.timer = new System.Windows.Forms.Timer(this.components);
         this.titleLabel = new System.Windows.Forms.Label();
         this.timeSettingGroupBox = new System.Windows.Forms.GroupBox();
@@ -174,6 +175,17 @@ partial class MainForm
         this.statusLabel.TabIndex = 8;
         this.statusLabel.Text = "准备设置时间...";
         //
+        // windowsSessionStatusLabel
+        //
+        this.windowsSessionStatusLabel.AutoSize = true;
+        this.windowsSessionStatusLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+        this.windowsSessionStatusLabel.ForeColor = System.Drawing.Color.DimGray;
+        this.windowsSessionStatusLabel.Location = new System.Drawing.Point(20, 50);
+        this.windowsSessionStatusLabel.Name = "windowsSessionStatusLabel";
+        this.windowsSessionStatusLabel.Size = new System.Drawing.Size(118, 15);
+        this.windowsSessionStatusLabel.TabIndex = 9;
+        this.windowsSessionStatusLabel.Text = "Windows: 已解锁";
+        //
         // timer
         //
         this.timer.Interval = 1000;
@@ -217,6 +229,7 @@ partial class MainForm
         //
         // statusGroupBox
         //
+        this.statusGroupBox.Controls.Add(this.windowsSessionStatusLabel);
         this.statusGroupBox.Controls.Add(this.statusLabel);
         this.statusGroupBox.Location = new System.Drawing.Point(50, 320);
         this.statusGroupBox.Name = "statusGroupBox";
@@ -371,6 +384,7 @@ partial class MainForm
     private Button pauseButton;
     private Button resetButton;
     private Label statusLabel;
+    private Label windowsSessionStatusLabel;
     private System.Windows.Forms.Timer timer;
     private Label titleLabel;
     private GroupBox timeSettingGroupBox;

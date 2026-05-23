@@ -86,9 +86,11 @@ public partial class MainForm : Form
         _timerService.StateChanged += OnTimerServiceStateChanged;
         // 监听 TimerService 倒计时过期事件（无论从桌面还是 Web 启动都会触发锁屏）
         _timerService.TimerExpired += OnTimerServiceExpired;
+        WindowsSessionService.Instance.StateChanged += OnWindowsSessionStateChanged;
 
         // 加载保存的设置
         LoadSavedSettings();
+        UpdateWindowsSessionStatus();
 
         // 数据库初始化
         try 
@@ -122,6 +124,11 @@ public partial class MainForm : Form
         isPaused = status.IsPaused;
         remainingTime = TimeSpan.FromSeconds(status.RemainingSeconds);
         totalTime = TimeSpan.FromSeconds(status.TotalSeconds);
+        _currentAccountId = status.CurrentAccountId;
+        if (status.IsRunning)
+        {
+            _sessionStartTime = _timerService.SessionStartTime;
+        }
 
         // 更新 UI
         UpdateTimeDisplay(remainingTime);
@@ -171,6 +178,17 @@ public partial class MainForm : Form
 
             if (timer.Enabled) timer.Stop();
         }
+    }
+
+    private void OnWindowsSessionStateChanged()
+    {
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action(OnWindowsSessionStateChanged));
+            return;
+        }
+
+        UpdateWindowsSessionStatus();
     }
 
     /// <summary>
@@ -432,8 +450,14 @@ public partial class MainForm : Form
         // 从 TimerService 同步状态到本地
         var status = _timerService.GetStatus();
         remainingTime = TimeSpan.FromSeconds(status.RemainingSeconds);
+        totalTime = TimeSpan.FromSeconds(status.TotalSeconds);
         isRunning = status.IsRunning;
         isPaused = status.IsPaused;
+        _currentAccountId = status.CurrentAccountId;
+        if (status.IsRunning)
+        {
+            _sessionStartTime = _timerService.SessionStartTime;
+        }
 
         UpdateTimeDisplay(remainingTime);
 
@@ -540,6 +564,8 @@ public partial class MainForm : Form
         {
             // 使用Windows系统命令锁屏
             Process.Start("rundll32.exe", "user32.dll,LockWorkStation");
+            WindowsSessionService.Instance.MarkLocked();
+            UpdateWindowsSessionStatus();
         }
         catch (Exception ex)
         {
@@ -569,6 +595,13 @@ public partial class MainForm : Form
     private void UpdateStatus(string status)
     {
         statusLabel.Text = status;
+    }
+
+    private void UpdateWindowsSessionStatus()
+    {
+        var sessionService = WindowsSessionService.Instance;
+        windowsSessionStatusLabel.Text = $"Windows: {sessionService.StateText}";
+        windowsSessionStatusLabel.ForeColor = sessionService.IsLocked ? Color.Firebrick : Color.DimGray;
     }
 
     private string FormatTimeSpan(TimeSpan time)
@@ -714,6 +747,27 @@ public partial class MainForm : Form
         base.SetVisibleCore(value);
     }
 
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == Program.ShowMainWindowMessageId)
+        {
+            ShowMainWindowFromSecondInstance();
+            return;
+        }
+
+        base.WndProc(ref m);
+    }
+
+    private void ShowMainWindowFromSecondInstance()
+    {
+        _allowVisible = true;
+        Show();
+        WindowState = FormWindowState.Normal;
+        ShowInTaskbar = true;
+        BringToFront();
+        Activate();
+    }
+
     private void TrayExit_Click(object? sender, EventArgs e)
     {
         if (!VerifyPassword("退出程序")) return;
@@ -760,6 +814,7 @@ public partial class MainForm : Form
         // 取消 TimerService 事件订阅
         _timerService.StateChanged -= OnTimerServiceStateChanged;
         _timerService.TimerExpired -= OnTimerServiceExpired;
+        WindowsSessionService.Instance.StateChanged -= OnWindowsSessionStateChanged;
 
         // 保存当前设置
         SaveCurrentSettings();

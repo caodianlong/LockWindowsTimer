@@ -227,7 +227,10 @@ public class TimerService
                 TotalSeconds = (int)_totalTime.TotalSeconds,
                 RemainingDisplay = FormatTimeSpan(_remainingTime),
                 Status = statusText,
-                CurrentAccountId = _currentAccountId
+                CurrentAccountId = _currentAccountId,
+                IsWindowsLocked = WindowsSessionService.Instance.IsLocked,
+                WindowsSessionState = WindowsSessionService.Instance.StateText,
+                WindowsSessionLastChangedAt = WindowsSessionService.Instance.LastChangedAt
             };
         }
     }
@@ -252,4 +255,7 @@ public class TimerStatus
     public string RemainingDisplay { get; set; } = "00:00:00";
     public string Status { get; set; } = "";
     public int CurrentAccountId { get; set; } = -1;
+    public bool IsWindowsLocked { get; set; }
+    public string WindowsSessionState { get; set; } = "已解锁";
+    public DateTime WindowsSessionLastChangedAt { get; set; } = DateTime.Now;
 }

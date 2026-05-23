@@ -96,6 +96,14 @@ public class ApiController : WebApiController
                 return;
             }
 
+            var accountError = ValidateTimerAccount(request.AccountId);
+            if (accountError != null)
+            {
+                HttpContext.Response.StatusCode = 400;
+                await SendJsonResponse(new { success = false, message = accountError });
+                return;
+            }
+
             var result = TimerService.Instance.Start(request.Hours, request.Minutes, request.AccountId);
 
             if (result)
@@ -372,6 +380,28 @@ public class ApiController : WebApiController
         {
             return $"密码验证失败: {ex.Message}";
         }
+    }
+
+    private static string? ValidateTimerAccount(int accountId)
+    {
+        if (!DatabaseManager.IsDatabaseAvailable())
+        {
+            return null;
+        }
+
+        var repo = new AccountRepository();
+        var accounts = repo.GetAllAccounts();
+        if (accounts.Count == 0)
+        {
+            return null;
+        }
+
+        if (accountId <= 0)
+        {
+            return "请选择计时用户";
+        }
+
+        return repo.GetAccountById(accountId) == null ? "选择的用户不存在" : null;
     }
 
     private async Task SendJsonResponse(object data)

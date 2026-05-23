@@ -57,6 +57,7 @@
         infoState: $('#info-state'),
         infoTotal: $('#info-total'),
         infoAccount: $('#info-account'),
+        infoWindowsSession: $('#info-windows-session'),
         infoProgress: $('#info-progress'),
 
         // 历史
@@ -433,6 +434,10 @@
         const acc = accounts.find((a) => a.id === status.currentAccountId);
         dom.infoAccount.textContent = acc ? acc.username : '无';
 
+        // Windows 锁屏状态
+        dom.infoWindowsSession.textContent = status.windowsSessionState || (status.isWindowsLocked ? '已锁屏' : '已解锁');
+        dom.infoWindowsSession.style.color = status.isWindowsLocked ? '#FCA5A5' : '';
+
         // 进度条
         let pct = 0;
         if (status.totalSeconds > 0) {
@@ -572,6 +577,12 @@
             return;
         }
 
+        if (accounts.length > 0 && accountId <= 0) {
+            showToast('请选择计时用户', 'error');
+            dom.selectAccount.focus();
+            return;
+        }
+
         try {
             const resp = await apiRequest('/api/timer/start', {
                 method: 'POST',
@@ -620,7 +631,21 @@
 
     function populateAccountSelects() {
         // 控制台账户选择
-        dom.selectAccount.innerHTML = '<option value="-1">无 / 默认</option>';
+        dom.selectAccount.innerHTML = '';
+        if (accounts.length > 0) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '-1';
+            placeholder.textContent = '请选择用户';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            dom.selectAccount.appendChild(placeholder);
+        } else {
+            const empty = document.createElement('option');
+            empty.value = '-1';
+            empty.textContent = '无可用用户';
+            dom.selectAccount.appendChild(empty);
+        }
+
         accounts.forEach((acc) => {
             const opt = document.createElement('option');
             opt.value = acc.id;
