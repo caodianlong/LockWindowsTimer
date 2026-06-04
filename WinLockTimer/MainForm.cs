@@ -88,6 +88,10 @@ public partial class MainForm : Form
         _timerService.TimerExpired += OnTimerServiceExpired;
         WindowsSessionService.Instance.StateChanged += OnWindowsSessionStateChanged;
 
+        // 绑定小时和分钟输入框的失去焦点事件，处理为空时设为0
+        hoursNumericUpDown.Leave += NumericUpDown_Leave;
+        minutesNumericUpDown.Leave += NumericUpDown_Leave;
+
         // 加载保存的设置
         LoadSavedSettings();
         UpdateWindowsSessionStatus();
@@ -252,10 +256,40 @@ public partial class MainForm : Form
         currentReminderType = (ReminderType)reminderTypeComboBox.SelectedIndex;
     }
 
+    private void NumericUpDown_Leave(object? sender, EventArgs e)
+    {
+        if (sender is NumericUpDown nud)
+        {
+            // 在 Leave 时捕获当前文本状态（此时控件内部 ValidateEditText 尚未执行）
+            string currentText = nud.Text;
+            if (string.IsNullOrWhiteSpace(currentText))
+            {
+                // 使用 BeginInvoke 延迟执行，确保在控件内部 ValidateEditText 完成后再覆盖
+                // ValidateEditText 会在 OnLostFocus 中将文本恢复为旧 Value，
+                // 我们需要在那之后强制将值和文本都设为 0
+                BeginInvoke(new Action(() =>
+                {
+                    nud.Value = 0;
+                    nud.Text = "0";
+                }));
+            }
+        }
+    }
+
     private void StartButton_Click(object sender, EventArgs e)
     {
         if (!isRunning)
         {
+            // 当输入框为空时，将其值设为0
+            if (string.IsNullOrWhiteSpace(hoursNumericUpDown.Text))
+            {
+                hoursNumericUpDown.Value = 0;
+            }
+            if (string.IsNullOrWhiteSpace(minutesNumericUpDown.Text))
+            {
+                minutesNumericUpDown.Value = 0;
+            }
+
             // 获取用户设置的时间
             int hours = (int)hoursNumericUpDown.Value;
             int minutes = (int)minutesNumericUpDown.Value;
