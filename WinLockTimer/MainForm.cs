@@ -22,6 +22,13 @@ public partial class MainForm : Form
     private string parentPassword = "";
     private ReminderType currentReminderType = ReminderType.Popup;
 
+    // 进程关闭设置
+    private bool _killProcessesOnExpiry = false;
+    private List<string> _killProcessNames = new();
+
+    // 提醒方式回退用
+    private int _previousReminderIndex = 0;
+
     private int _currentAccountId = -1;
     private DateTime _sessionStartTime;
     private AccountRepository _accountRepo;
@@ -81,6 +88,9 @@ public partial class MainForm : Form
 
         // 设置提醒方式下拉框事件
         reminderTypeComboBox.SelectedIndexChanged += ReminderTypeComboBox_SelectedIndexChanged;
+
+        // 密码输入框获取焦点时验证家长密码
+        passwordTextBox.Enter += PasswordTextBox_Enter;
 
         // 监听 TimerService 状态变更（从 Web API 触发的操作）
         _timerService.StateChanged += OnTimerServiceStateChanged;
@@ -148,6 +158,8 @@ public partial class MainForm : Form
             minutesNumericUpDown.Enabled = false;
             passwordTextBox.Enabled = false;
             reminderTypeComboBox.Enabled = false;
+            killProcessCheckBox.Enabled = false;
+            editProcessListButton.Enabled = false;
             accountManagementMenuItem.Enabled = false;
 
             if (isPaused)
@@ -178,6 +190,8 @@ public partial class MainForm : Form
             minutesNumericUpDown.Enabled = true;
             passwordTextBox.Enabled = true;
             reminderTypeComboBox.Enabled = true;
+            killProcessCheckBox.Enabled = true;
+            editProcessListButton.Enabled = killProcessCheckBox.Checked;
             accountManagementMenuItem.Enabled = true;
 
             if (timer.Enabled) timer.Stop();
@@ -216,6 +230,26 @@ public partial class MainForm : Form
         isRunning = false;
         isPaused = false;
 
+        // 如果启用了关闭程序功能，先关闭游戏/浏览器
+        if (_killProcessesOnExpiry)
+        {
+            try
+            {
+                var namesToKill = _killProcessNames.Count > 0
+                    ? _killProcessNames
+                    : new List<string>(ProcessKillerService.DefaultProcessNames);
+                var killed = ProcessKillerService.KillProcesses(namesToKill);
+                if (killed.Count > 0)
+                {
+                    Debug.WriteLine($"已关闭进程: {string.Join(", ", killed)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"关闭进程失败: {ex.Message}");
+            }
+        }
+
         // 执行锁屏
         LockScreen();
 
@@ -231,6 +265,8 @@ public partial class MainForm : Form
         minutesNumericUpDown.Enabled = true;
         passwordTextBox.Enabled = true;
         reminderTypeComboBox.Enabled = true;
+        killProcessCheckBox.Enabled = true;
+        editProcessListButton.Enabled = killProcessCheckBox.Checked;
         accountManagementMenuItem.Enabled = true;
 
         UpdateStatus("准备设置时间...");
@@ -253,7 +289,44 @@ public partial class MainForm : Form
 
     private void ReminderTypeComboBox_SelectedIndexChanged(object sender, EventArgs e)
     {
+        // 加载设置时不验证密码
+        if (_isLoadingSettings)
+        {
+            _previousReminderIndex = reminderTypeComboBox.SelectedIndex;
+            currentReminderType = (ReminderType)reminderTypeComboBox.SelectedIndex;
+            return;
+        }
+
+        // 验证家长密码
+        if (!VerifyPassword("修改提醒方式"))
+        {
+            // 回退到之前的选项
+            _isLoadingSettings = true;
+            reminderTypeComboBox.SelectedIndex = _previousReminderIndex;
+            _isLoadingSettings = false;
+            return;
+        }
+
+        _previousReminderIndex = reminderTypeComboBox.SelectedIndex;
         currentReminderType = (ReminderType)reminderTypeComboBox.SelectedIndex;
+    }
+
+    private void PasswordTextBox_Enter(object? sender, EventArgs e)
+    {
+        // 如果已设置密码，编辑前需要验证
+        if (!string.IsNullOrEmpty(parentPassword))
+        {
+            if (!VerifyPassword("修改家长密码"))
+            {
+                // 验证失败，将焦点移到其他控件
+                this.ActiveControl = startButton;
+                return;
+            }
+
+            // 验证通过，清空输入框让用户输入新密码
+            passwordTextBox.Text = "";
+            passwordTextBox.PasswordChar = '*';
+        }
     }
 
     private void NumericUpDown_Leave(object? sender, EventArgs e)
@@ -352,6 +425,8 @@ public partial class MainForm : Form
             minutesNumericUpDown.Enabled = false;
             passwordTextBox.Enabled = false;
             reminderTypeComboBox.Enabled = false;
+            killProcessCheckBox.Enabled = false;
+            editProcessListButton.Enabled = false;
             accountManagementMenuItem.Enabled = false; // 计时中禁用账户管理
 
             UpdateStatus("倒计时运行中...");
@@ -423,6 +498,8 @@ public partial class MainForm : Form
         minutesNumericUpDown.Enabled = true;
         passwordTextBox.Enabled = true;
         reminderTypeComboBox.Enabled = true;
+        killProcessCheckBox.Enabled = true;
+        editProcessListButton.Enabled = killProcessCheckBox.Checked;
         accountManagementMenuItem.Enabled = true; // 重置后启用账户管理
 
         // 同步到 TimerService
@@ -592,6 +669,49 @@ public partial class MainForm : Form
         }
     }
 
+    // 标志位：加载设置时不触发密码验证
+    private bool _isLoadingSettings = false;
+
+    private void KillProcessCheckBox_CheckedChanged(object sender, EventArgs e)
+    {
+        // 加载设置时不需要验证密码
+        if (_isLoadingSettings) return;
+
+        // 验证家长密码
+        if (!VerifyPassword("修改关闭程序设置"))
+        {
+            // 密码验证失败，回退 CheckBox 状态
+            _isLoadingSettings = true; // 防止递归触发
+            killProcessCheckBox.Checked = _killProcessesOnExpiry;
+            _isLoadingSettings = false;
+            return;
+        }
+
+        _killProcessesOnExpiry = killProcessCheckBox.Checked;
+        editProcessListButton.Enabled = killProcessCheckBox.Checked;
+    }
+
+    private void EditProcessListButton_Click(object sender, EventArgs e)
+    {
+        // 验证家长密码
+        if (!VerifyPassword("编辑关闭程序列表"))
+        {
+            return;
+        }
+
+        var currentNames = _killProcessNames.Count > 0
+            ? _killProcessNames
+            : new List<string>(ProcessKillerService.DefaultProcessNames);
+
+        using (var form = new ProcessListEditForm(currentNames))
+        {
+            if (form.ShowDialog(this) == DialogResult.OK)
+            {
+                _killProcessNames = form.ProcessNames;
+            }
+        }
+    }
+
     private void LockScreen()
     {
         try
@@ -668,12 +788,24 @@ public partial class MainForm : Form
 
             parentPassword = settings.ParentPassword; // 保存哈希密码用于验证
 
+            // 设置标志位避免触发密码验证
+            _isLoadingSettings = true;
+
             // 加载提醒方式
             if (settings.ReminderType >= 0 && settings.ReminderType < reminderTypeComboBox.Items.Count)
             {
                 reminderTypeComboBox.SelectedIndex = settings.ReminderType;
                 currentReminderType = (ReminderType)settings.ReminderType;
+                _previousReminderIndex = settings.ReminderType;
             }
+
+            // 加载关闭程序设置
+            _killProcessesOnExpiry = settings.KillProcessesOnExpiry;
+            killProcessCheckBox.Checked = settings.KillProcessesOnExpiry;
+            editProcessListButton.Enabled = settings.KillProcessesOnExpiry;
+            _killProcessNames = ProcessKillerService.DeserializeProcessNames(settings.KillProcessNames);
+
+            _isLoadingSettings = false;
         }
         catch (Exception ex)
         {
@@ -699,8 +831,25 @@ public partial class MainForm : Form
 
             if (currentPassword == "●●●●●●")
             {
-                // 用户没有修改密码，不需要重新保存密码设置
-                // 直接返回，避免重复保存
+                // 用户没有修改密码，从已保存的设置中读取密码哈希
+                // 但仍需保存其他可能改变的设置项（如关闭程序设置）
+                var existingSettings = SettingsManager.LoadSettings();
+                var settings = new SettingsManager.AppSettings
+                {
+                    ParentPassword = existingSettings.ParentPassword, // 保持原始哈希
+                    ReminderType = reminderTypeComboBox.SelectedIndex,
+                    RememberSettings = true,
+                    KillProcessesOnExpiry = _killProcessesOnExpiry,
+                    KillProcessNames = ProcessKillerService.SerializeProcessNames(_killProcessNames)
+                };
+
+                // 直接序列化保存，不需要重新哈希密码
+                string json = System.Text.Json.JsonSerializer.Serialize(settings, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WinLockTimer.settings"), json);
                 return;
             }
             else if (string.IsNullOrEmpty(currentPassword))
@@ -723,7 +872,9 @@ public partial class MainForm : Form
                 {
                     ParentPassword = passwordToSave,
                     ReminderType = reminderTypeComboBox.SelectedIndex,
-                    RememberSettings = true
+                    RememberSettings = true,
+                    KillProcessesOnExpiry = _killProcessesOnExpiry,
+                    KillProcessNames = ProcessKillerService.SerializeProcessNames(_killProcessNames)
                 };
 
                 SettingsManager.SaveSettings(settings);
@@ -890,8 +1041,15 @@ public partial class MainForm : Form
                 passwordTextBox.Text = "";
                 passwordTextBox.PasswordChar = '*'; // 恢复星号显示
                 parentPassword = "";
+                _isLoadingSettings = true;
                 reminderTypeComboBox.SelectedIndex = 0;
                 currentReminderType = ReminderType.Popup;
+                _previousReminderIndex = 0;
+                killProcessCheckBox.Checked = false;
+                _isLoadingSettings = false;
+                _killProcessesOnExpiry = false;
+                editProcessListButton.Enabled = false;
+                _killProcessNames.Clear();
 
                 MessageBox.Show(this, "设置已成功清除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }

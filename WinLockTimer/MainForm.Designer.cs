@@ -1,4 +1,4 @@
-﻿namespace WinLockTimer;
+namespace WinLockTimer;
 
 partial class MainForm
 {
@@ -51,6 +51,8 @@ partial class MainForm
         this.reminderTypeLabel = new System.Windows.Forms.Label();
         this.passwordTextBox = new System.Windows.Forms.TextBox();
         this.passwordLabel = new System.Windows.Forms.Label();
+        this.killProcessCheckBox = new System.Windows.Forms.CheckBox();
+        this.editProcessListButton = new System.Windows.Forms.Button();
         this.menuStrip = new System.Windows.Forms.MenuStrip();
         this.manageMenuItem = new System.Windows.Forms.ToolStripMenuItem();
         this.accountManagementMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -240,6 +242,8 @@ partial class MainForm
         //
         // settingsGroupBox
         //
+        this.settingsGroupBox.Controls.Add(this.editProcessListButton);
+        this.settingsGroupBox.Controls.Add(this.killProcessCheckBox);
         this.settingsGroupBox.Controls.Add(this.clearSettingsButton);
         this.settingsGroupBox.Controls.Add(this.reminderTypeComboBox);
         this.settingsGroupBox.Controls.Add(this.reminderTypeLabel);
@@ -247,7 +251,7 @@ partial class MainForm
         this.settingsGroupBox.Controls.Add(this.passwordLabel);
         this.settingsGroupBox.Location = new System.Drawing.Point(50, 400);
         this.settingsGroupBox.Name = "settingsGroupBox";
-        this.settingsGroupBox.Size = new System.Drawing.Size(300, 130);
+        this.settingsGroupBox.Size = new System.Drawing.Size(300, 170);
         this.settingsGroupBox.TabIndex = 13;
         this.settingsGroupBox.TabStop = false;
         this.settingsGroupBox.Text = "设置";
@@ -330,7 +334,7 @@ partial class MainForm
         //
         this.clearSettingsButton.BackColor = System.Drawing.Color.LightGray;
         this.clearSettingsButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-        this.clearSettingsButton.Location = new System.Drawing.Point(20, 90);
+        this.clearSettingsButton.Location = new System.Drawing.Point(20, 130);
         this.clearSettingsButton.Name = "clearSettingsButton";
         this.clearSettingsButton.Size = new System.Drawing.Size(120, 25);
         this.clearSettingsButton.TabIndex = 4;
@@ -338,12 +342,34 @@ partial class MainForm
         this.clearSettingsButton.UseVisualStyleBackColor = false;
         this.clearSettingsButton.Click += new System.EventHandler(this.ClearSettingsButton_Click);
         //
+        // killProcessCheckBox
+        //
+        this.killProcessCheckBox.AutoSize = true;
+        this.killProcessCheckBox.Location = new System.Drawing.Point(20, 90);
+        this.killProcessCheckBox.Name = "killProcessCheckBox";
+        this.killProcessCheckBox.Size = new System.Drawing.Size(186, 19);
+        this.killProcessCheckBox.TabIndex = 5;
+        this.killProcessCheckBox.Text = "倒计时结束关闭游戏/浏览器";
+        this.killProcessCheckBox.UseVisualStyleBackColor = true;
+        this.killProcessCheckBox.CheckedChanged += new System.EventHandler(this.KillProcessCheckBox_CheckedChanged);
+        //
+        // editProcessListButton
+        //
+        this.editProcessListButton.Location = new System.Drawing.Point(215, 87);
+        this.editProcessListButton.Name = "editProcessListButton";
+        this.editProcessListButton.Size = new System.Drawing.Size(65, 25);
+        this.editProcessListButton.TabIndex = 6;
+        this.editProcessListButton.Text = "编辑列表";
+        this.editProcessListButton.Enabled = false;
+        this.editProcessListButton.UseVisualStyleBackColor = true;
+        this.editProcessListButton.Click += new System.EventHandler(this.EditProcessListButton_Click);
+        //
         // MainForm
         //
         this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         this.BackColor = System.Drawing.Color.White;
-        this.ClientSize = new System.Drawing.Size(400, 550);
+        this.ClientSize = new System.Drawing.Size(400, 590);
         this.Controls.Add(this.settingsGroupBox);
         this.Controls.Add(this.statusGroupBox);
         this.Controls.Add(this.controlGroupBox);
@@ -396,6 +422,8 @@ partial class MainForm
     private Label passwordLabel;
     private ComboBox reminderTypeComboBox;
     private Label reminderTypeLabel;
+    private CheckBox killProcessCheckBox;
+    private Button editProcessListButton;
     private MenuStrip menuStrip;
     private ToolStripMenuItem manageMenuItem;
     private ToolStripMenuItem accountManagementMenuItem;
