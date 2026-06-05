@@ -21,6 +21,10 @@ public static class SettingsManager
         public int ReminderType { get; set; } = 0; // 0: 弹窗, 1: 语音, 2: 两者
         public bool RememberSettings { get; set; } = true;
 
+        // 倒计时结束关闭程序设置
+        public bool KillProcessesOnExpiry { get; set; } = false; // 是否在倒计时结束时关闭游戏/浏览器
+        public string KillProcessNames { get; set; } = string.Empty; // 自定义进程名列表（逗号分隔），为空时使用默认列表
+
         // Web Server 设置
         public bool WebServerEnabled { get; set; } = true;
         public string WebServerIp { get; set; } = "127.0.0.1";
@@ -65,7 +69,9 @@ public static class SettingsManager
                 {
                     ParentPassword = hashedPassword,
                     ReminderType = settings.ReminderType,
-                    RememberSettings = settings.RememberSettings
+                    RememberSettings = settings.RememberSettings,
+                    KillProcessesOnExpiry = settings.KillProcessesOnExpiry,
+                    KillProcessNames = settings.KillProcessNames
                 };
 
                 string json = JsonSerializer.Serialize(tempSettings, new JsonSerializerOptions
