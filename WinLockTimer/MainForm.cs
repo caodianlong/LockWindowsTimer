@@ -22,6 +22,11 @@ public partial class MainForm : Form
     private string parentPassword = "";
     private ReminderType currentReminderType = ReminderType.Popup;
 
+    // 标记密码是否已通过验证，允许编辑设置区域
+    private bool _settingsUnlocked = false;
+    // 抑制设置区域 Enter 事件验证（程序化操作期间不弹验证窗口）
+    private bool _suppressSettingsEnter = false;
+
     private int _currentAccountId = -1;
     private DateTime _sessionStartTime;
     private AccountRepository _accountRepo;
@@ -82,6 +87,14 @@ public partial class MainForm : Form
         // 设置提醒方式下拉框事件
         reminderTypeComboBox.SelectedIndexChanged += ReminderTypeComboBox_SelectedIndexChanged;
 
+        // NumericUpDown 清空后失去焦点自动归零
+        hoursNumericUpDown.Leave += NumericUpDown_Leave;
+        minutesNumericUpDown.Leave += NumericUpDown_Leave;
+
+        // 密码文本框获得焦点时验证家长密码
+        passwordTextBox.Enter += SettingsControl_Enter;
+        reminderTypeComboBox.Enter += SettingsControl_Enter;
+
         // 监听 TimerService 状态变更（从 Web API 触发的操作）
         _timerService.StateChanged += OnTimerServiceStateChanged;
         // 监听 TimerService 倒计时过期事件（无论从桌面还是 Web 启动都会触发锁屏）
@@ -137,6 +150,7 @@ public partial class MainForm : Form
         // 更新按钮状态
         if (isRunning)
         {
+            _suppressSettingsEnter = true;
             startButton.Enabled = false;
             pauseButton.Enabled = true;
             resetButton.Enabled = true;
@@ -145,6 +159,7 @@ public partial class MainForm : Form
             passwordTextBox.Enabled = false;
             reminderTypeComboBox.Enabled = false;
             accountManagementMenuItem.Enabled = false;
+            _suppressSettingsEnter = false;
 
             if (isPaused)
             {
@@ -165,6 +180,7 @@ public partial class MainForm : Form
         }
         else
         {
+            _suppressSettingsEnter = true;
             startButton.Enabled = true;
             pauseButton.Enabled = false;
             resetButton.Enabled = false;
@@ -175,6 +191,7 @@ public partial class MainForm : Form
             passwordTextBox.Enabled = true;
             reminderTypeComboBox.Enabled = true;
             accountManagementMenuItem.Enabled = true;
+            _suppressSettingsEnter = false;
 
             if (timer.Enabled) timer.Stop();
         }
@@ -218,6 +235,7 @@ public partial class MainForm : Form
         // 重置界面
         remainingTime = TimeSpan.Zero;
         UpdateTimeDisplay(TimeSpan.Zero);
+        _suppressSettingsEnter = true;
         startButton.Enabled = true;
         pauseButton.Enabled = false;
         resetButton.Enabled = false;
@@ -228,6 +246,7 @@ public partial class MainForm : Form
         passwordTextBox.Enabled = true;
         reminderTypeComboBox.Enabled = true;
         accountManagementMenuItem.Enabled = true;
+        _suppressSettingsEnter = false;
 
         UpdateStatus("准备设置时间...");
 
@@ -245,6 +264,65 @@ public partial class MainForm : Form
     private void HistoryMenuItem_Click(object sender, EventArgs e)
     {
         new HistoryForm().ShowDialog(this);
+    }
+
+    /// <summary>
+    /// NumericUpDown 清空后失去焦点自动设为 0
+    /// </summary>
+    private void NumericUpDown_Leave(object? sender, EventArgs e)
+    {
+        if (sender is NumericUpDown nud)
+        {
+            // 当文本为空时，将值设为 0
+            if (string.IsNullOrWhiteSpace(nud.Text))
+            {
+                nud.Value = 0;
+                nud.Text = "0";
+            }
+        }
+    }
+
+    /// <summary>
+    /// 设置控件获得焦点时，验证家长密码
+    /// 如果已有密码且未解锁，需要先验证密码才能编辑
+    /// </summary>
+    private void SettingsControl_Enter(object? sender, EventArgs e)
+    {
+        // 程序化操作期间不弹验证窗口
+        if (_suppressSettingsEnter) return;
+
+        // 如果没有设置密码，或已经解锁，直接允许编辑
+        if (string.IsNullOrEmpty(parentPassword) || _settingsUnlocked)
+        {
+            return;
+        }
+
+        // 需要验证家长密码
+        if (VerifyPassword("修改设置"))
+        {
+            _settingsUnlocked = true; // 验证通过，本次会话内不再重复验证
+
+            // 如果是密码框获得焦点，清空显示以便输入新密码
+            if (sender == passwordTextBox)
+            {
+                passwordTextBox.Text = "";
+                passwordTextBox.PasswordChar = '*';
+            }
+        }
+        else
+        {
+            // 验证失败，移走焦点到其他控件
+            // 使用 BeginInvoke 延迟执行，避免在 Enter 事件中直接切换焦点导致问题
+            BeginInvoke(new Action(() =>
+            {
+                // 恢复提醒方式为原来的值
+                if (sender == reminderTypeComboBox)
+                {
+                    reminderTypeComboBox.SelectedIndex = (int)currentReminderType;
+                }
+                startButton.Focus();
+            }));
+        }
     }
 
     private void ReminderTypeComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -266,11 +344,9 @@ public partial class MainForm : Form
                 return;
             }
 
-            // 检查密码设置是否有变化，如果有变化则保存
-            string currentPassword = passwordTextBox.Text.Trim();
-            if (currentPassword != "●●●●●●" && !string.IsNullOrEmpty(currentPassword))
+            // 如果设置已解锁（说明用户验证过密码并可能做了修改），保存当前设置
+            if (_settingsUnlocked)
             {
-                // 用户输入了新密码，需要保存
                 SaveCurrentSettings();
             }
 
@@ -311,6 +387,7 @@ public partial class MainForm : Form
             _sessionStartTime = DateTime.Now; // 记录开始时间
 
             // 更新界面状态
+            _suppressSettingsEnter = true;
             startButton.Enabled = false;
             pauseButton.Enabled = true;
             resetButton.Enabled = true;
@@ -319,6 +396,7 @@ public partial class MainForm : Form
             passwordTextBox.Enabled = false;
             reminderTypeComboBox.Enabled = false;
             accountManagementMenuItem.Enabled = false; // 计时中禁用账户管理
+            _suppressSettingsEnter = false;
 
             UpdateStatus("倒计时运行中...");
         }
@@ -380,6 +458,7 @@ public partial class MainForm : Form
         remainingTime = TimeSpan.Zero;
         UpdateTimeDisplay(TimeSpan.Zero);
 
+        _suppressSettingsEnter = true;
         startButton.Enabled = true;
         pauseButton.Enabled = false;
         resetButton.Enabled = false;
@@ -390,6 +469,7 @@ public partial class MainForm : Form
         passwordTextBox.Enabled = true;
         reminderTypeComboBox.Enabled = true;
         accountManagementMenuItem.Enabled = true; // 重置后启用账户管理
+        _suppressSettingsEnter = false;
 
         // 同步到 TimerService
         _timerService.Reset();
@@ -658,46 +738,62 @@ public partial class MainForm : Form
             // 获取当前密码设置
             string currentPassword = passwordTextBox.Text.Trim();
 
-            // 如果用户输入了新密码（不是占位符），则保存新密码
-            // 如果显示的是占位符，说明用户没有修改密码，不需要重新保存
-            bool shouldSavePassword = false;
-            string passwordToSave = "";
+            // 确定要保存的密码值
+            string passwordToSave;
 
             if (currentPassword == "●●●●●●")
             {
-                // 用户没有修改密码，不需要重新保存密码设置
-                // 直接返回，避免重复保存
+                // 占位符未被修改，保留原密码哈希，仅保存其他设置（如提醒方式）
+                // 使用 SaveSettingsPreservePassword 保留原密码
+                var settings = SettingsManager.LoadSettings();
+                settings.ReminderType = reminderTypeComboBox.SelectedIndex;
+                settings.RememberSettings = true;
+
+                // 直接序列化保存，不触发密码重新哈希
+                SettingsManager.SaveSettingsRaw(settings);
+
+                // 重置解锁状态
+                _settingsUnlocked = false;
                 return;
             }
             else if (string.IsNullOrEmpty(currentPassword))
             {
                 // 用户清空了密码
-                shouldSavePassword = true;
                 passwordToSave = "";
             }
             else
             {
-                // 用户输入了新密码，需要保存
-                shouldSavePassword = true;
+                // 用户输入了新密码
                 passwordToSave = currentPassword;
             }
 
-            // 只有当密码有变化时才保存设置
-            if (shouldSavePassword)
+            var newSettings = new SettingsManager.AppSettings
             {
-                var settings = new SettingsManager.AppSettings
-                {
-                    ParentPassword = passwordToSave,
-                    ReminderType = reminderTypeComboBox.SelectedIndex,
-                    RememberSettings = true
-                };
+                ParentPassword = passwordToSave,
+                ReminderType = reminderTypeComboBox.SelectedIndex,
+                RememberSettings = true
+            };
 
-                SettingsManager.SaveSettings(settings);
+            SettingsManager.SaveSettings(newSettings);
 
-                // 更新内存中的密码
-                var loadedSettings = SettingsManager.LoadSettings();
-                parentPassword = loadedSettings.ParentPassword;
+            // 更新内存中的密码
+            var loadedSettings = SettingsManager.LoadSettings();
+            parentPassword = loadedSettings.ParentPassword;
+
+            // 如果密码被清空，重置UI状态
+            if (string.IsNullOrEmpty(passwordToSave))
+            {
+                passwordTextBox.PasswordChar = '*';
             }
+            else
+            {
+                // 密码已保存，重新显示占位符
+                passwordTextBox.Text = "●●●●●●";
+                passwordTextBox.PasswordChar = '●';
+            }
+
+            // 重置解锁状态
+            _settingsUnlocked = false;
         }
         catch (Exception ex)
         {
@@ -816,8 +912,11 @@ public partial class MainForm : Form
         _timerService.TimerExpired -= OnTimerServiceExpired;
         WindowsSessionService.Instance.StateChanged -= OnWindowsSessionStateChanged;
 
-        // 保存当前设置
-        SaveCurrentSettings();
+        // 如果设置已解锁（用户验证过密码并可能做了修改），保存当前设置
+        if (_settingsUnlocked)
+        {
+            SaveCurrentSettings();
+        }
 
         base.OnFormClosing(e);
     }
@@ -858,6 +957,7 @@ public partial class MainForm : Form
                 parentPassword = "";
                 reminderTypeComboBox.SelectedIndex = 0;
                 currentReminderType = ReminderType.Popup;
+                _settingsUnlocked = false; // 重置解锁状态
 
                 MessageBox.Show(this, "设置已成功清除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }

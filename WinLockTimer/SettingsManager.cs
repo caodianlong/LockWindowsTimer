@@ -93,6 +93,28 @@ public static class SettingsManager
     }
 
     /// <summary>
+    /// 直接保存设置（不对密码进行哈希处理）
+    /// 用于仅修改提醒方式等非密码字段时，保留原始密码哈希
+    /// </summary>
+    /// <param name="settings">设置对象（密码字段应已包含哈希值）</param>
+    public static void SaveSettingsRaw(AppSettings settings)
+    {
+        try
+        {
+            string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            File.WriteAllText(SettingsFilePath, json);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"保存设置失败: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
     /// 加载设置
     /// </summary>
     /// <returns>设置对象</returns>
