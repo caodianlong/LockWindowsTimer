@@ -18,7 +18,7 @@ public static class SettingsManager
     public class AppSettings
     {
         public string ParentPassword { get; set; } = string.Empty;
-        public int ReminderType { get; set; } = 0; // 0: 弹窗, 1: 语音, 2: 两者
+        public int ReminderType { get; set; } = 0; // 0: 弹窗, 1: 声音, 2: 弹窗+声音, 3: 语音播报, 4: 弹窗+语音播报
         public bool RememberSettings { get; set; } = true;
 
         // 倒计时结束关闭程序设置

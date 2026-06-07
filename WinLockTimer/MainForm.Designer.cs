@@ -262,18 +262,20 @@ partial class MainForm
         this.reminderTypeComboBox.FormattingEnabled = true;
         this.reminderTypeComboBox.Items.AddRange(new object[] {
             "弹窗提醒",
-            "语音提醒",
-            "弹窗+语音提醒"});
-        this.reminderTypeComboBox.Location = new System.Drawing.Point(150, 55);
+            "声音提醒",
+            "弹窗+声音提醒",
+            "语音播报提醒",
+            "弹窗+语音播报提醒"});
+        this.reminderTypeComboBox.Location = new System.Drawing.Point(120, 55);
         this.reminderTypeComboBox.Name = "reminderTypeComboBox";
-        this.reminderTypeComboBox.Size = new System.Drawing.Size(130, 23);
+        this.reminderTypeComboBox.Size = new System.Drawing.Size(160, 23);
         this.reminderTypeComboBox.TabIndex = 3;
         this.reminderTypeComboBox.SelectedIndex = 0;
         //
         // reminderTypeLabel
         //
         this.reminderTypeLabel.AutoSize = true;
-        this.reminderTypeLabel.Location = new System.Drawing.Point(150, 35);
+        this.reminderTypeLabel.Location = new System.Drawing.Point(120, 35);
         this.reminderTypeLabel.Name = "reminderTypeLabel";
         this.reminderTypeLabel.Size = new System.Drawing.Size(59, 15);
         this.reminderTypeLabel.TabIndex = 2;

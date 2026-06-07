@@ -49,9 +49,11 @@ public partial class MainForm : Form
 
     private enum ReminderType
     {
-        Popup = 0,
-        Voice = 1,
-        Both = 2
+        Popup = 0,          // 弹窗提醒
+        Sound = 1,          // 声音提醒（系统提示音，原"语音提醒"）
+        PopupSound = 2,     // 弹窗+声音提醒（原"弹窗+语音提醒"）
+        Voice = 3,          // 语音播报提醒（播放 wav 文件，仅 10/5/1 分钟）
+        PopupVoice = 4      // 弹窗+语音播报提醒
     }
 
     private bool _allowVisible = true;
@@ -688,31 +690,71 @@ public partial class MainForm : Form
             case ReminderType.Popup:
                 MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 break;
+            case ReminderType.Sound:
+                PlaySoundReminder();
+                break;
+            case ReminderType.PopupSound:
+                MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                PlaySoundReminder();
+                break;
             case ReminderType.Voice:
                 PlayVoiceReminder(reminderTime);
                 break;
-            case ReminderType.Both:
-                MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            case ReminderType.PopupVoice:
                 PlayVoiceReminder(reminderTime);
+                MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 break;
         }
     }
 
-    private void PlayVoiceReminder(TimeSpan reminderTime)
+    // 语音提醒音频文件映射（分钟 -> 文件名）
+    private static readonly Dictionary<int, string> VoiceReminderFiles = new()
+    {
+        { 10, "remaining_10_minutes.wav" },
+        { 5, "remaining_5_minutes.wav" },
+        { 1, "remaining_1_minute.wav" }
+    };
+
+    /// <summary>
+    /// 声音提醒：播放系统提示音（所有提醒时间点都会触发）
+    /// </summary>
+    private void PlaySoundReminder()
     {
         try
         {
-            // 使用系统提示音作为语音提醒
             SystemSounds.Exclamation.Play();
         }
         catch (Exception ex)
         {
-            // 如果语音提醒失败，使用弹窗提醒
-            string message = reminderTime == TimeSpan.FromMinutes(1)
-                ? "⚠️ 最后1分钟！请准备保存工作！"
-                : $"⏰ 提醒：还有 {(int)reminderTime.TotalMinutes} 分钟将自动锁屏！";
+            Debug.WriteLine($"声音提醒播放失败: {ex.Message}");
+        }
+    }
 
-            MessageBox.Show(this, message, "WinLockTimer 提醒", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    /// <summary>
+    /// 语音播报提醒：播放 sounds 目录下的 wav 文件（仅 10/5/1 分钟有对应文件）
+    /// </summary>
+    private void PlayVoiceReminder(TimeSpan reminderTime)
+    {
+        try
+        {
+            int minutes = (int)reminderTime.TotalMinutes;
+            if (VoiceReminderFiles.TryGetValue(minutes, out string? fileName))
+            {
+                // 定位 sounds 目录下的 wav 文件
+                string soundPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sounds", fileName);
+                if (File.Exists(soundPath))
+                {
+                    var player = new SoundPlayer(soundPath);
+                    player.Play(); // 异步播放，不阻塞UI
+                    return;
+                }
+                Debug.WriteLine($"语音文件不存在: {soundPath}");
+            }
+            // 当前时间点没有对应的语音文件（4/3/2分钟），不播放任何声音
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"语音播报播放失败: {ex.Message}");
         }
     }
 
@@ -734,6 +776,7 @@ public partial class MainForm : Form
             return;
         }
 
+        _settingsUnlocked = true; // 标记设置已修改，确保后续保存
         _killProcessesOnExpiry = killProcessCheckBox.Checked;
         editProcessListButton.Enabled = killProcessCheckBox.Checked;
     }
@@ -755,6 +798,7 @@ public partial class MainForm : Form
             if (form.ShowDialog(this) == DialogResult.OK)
             {
                 _killProcessNames = form.ProcessNames;
+                _settingsUnlocked = true; // 标记设置已修改，确保后续保存
             }
         }
     }
